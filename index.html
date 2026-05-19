@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Sapius | MAC Detector</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="login-container" class="login-container">
+        <div class="logo">SAPIUS<span>.</span></div>
+
+        <div id="server-selection-view">
+            <h2 style="text-align: center; margin-bottom: 2rem; font-weight: 300; opacity: 0.9;">Selecciona un Entorno</h2>
+            <div class="server-options">
+                <button id="dev-server-btn" class="server-btn">
+                    <span class="btn-title">DESARROLLO</span>
+                    <span class="btn-url">test.sapius.com.mx</span>
+                </button>
+                <button id="prod-server-btn" class="server-btn">
+                    <span class="btn-title">PRODUCCIÓN</span>
+                    <span class="btn-url">sapius.com.mx</span>
+                </button>
+            </div>
+        </div>
+        
+        <div id="login-view" class="hidden">
+            <div id="auth-form">
+            <div class="form-group">
+                <label for="username">Usuario Sapius</label>
+                <input type="text" id="username" placeholder="Tu nombre de usuario" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Contraseña</label>
+                <input type="password" id="password" required>
+            </div>
+            <button id="login-btn">Iniciar Sesión</button>
+        </div>
+
+        <div id="loading-view" class="hidden">
+            <div style="text-align: center;">
+                <p>Detectando hardware y validando acceso...</p>
+                <div class="spinner"></div>
+            </div>
+        </div>
+
+        <div id="success-view" class="hidden">
+            <div class="success-card">
+                <div class="success-icon">✓</div>
+                <h3>Servicio Activo</h3>
+                <p class="success-detail">El detector de hardware está funcionando correctamente.</p>
+                <hr>
+                <div class="info-row">
+                    <span>Usuario:</span>
+                    <strong id="display-user">-</strong>
+                </div>
+                <div class="info-row">
+                    <span>MAC registrada:</span>
+                    <strong id="display-mac">-</strong>
+                </div>
+                <div class="status-badge">EQUIPO AUTORIZADO</div>
+            </div>
+        </div>
+
+        <div id="status-msg" class="status"></div>
+    </div>
+
+    <style>
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+
+    <script src="renderer.js"></script>
+</body>
+</html>
