@@ -1,5 +1,31 @@
-const { contextBridge, ipcRenderer } = require('electron');
+const { contextBridge, ipcRenderer, webFrame } = require('electron');
 const os = require('os');
+
+// Parche dinámico para corregir la falta de ID en los reproductores de video de la plataforma Sapius
+// Usamos webFrame.executeJavaScript para inyectarlo en el Main World de forma segura,
+// saltándonos cualquier restricción de CSP (Content Security Policy) de scripts en línea.
+try {
+    webFrame.executeJavaScript(`
+        (function() {
+            const originalGetElementById = document.getElementById;
+            document.getElementById = function(id) {
+                let element = originalGetElementById.call(document, id);
+                if (!element) {
+                    if (id === 'videoClase' || id === 'video') {
+                        element = document.querySelector('video');
+                        if (element) {
+                            element.id = id;
+                            console.log('[Sapius Detector] Asignado ID "' + id + '" al reproductor de video de forma dinámica.');
+                        }
+                    }
+                }
+                return element;
+            };
+        })();
+    `);
+} catch (e) {
+    console.error('[Sapius Detector] Error al inyectar parche de video:', e);
+}
 
 contextBridge.exposeInMainWorld('sapiusAPI', {
     getMacAddress: () => {

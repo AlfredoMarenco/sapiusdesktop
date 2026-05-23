@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sapius | Acceso Seguro</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+</head>
+<body class="login-body">
+    <div class="glass-container auth-box">
+        <div class="logo">SAPIUS<span>.</span></div>
+
+        <div id="server-selection-view">
+            <h2>Selecciona un Entorno</h2>
+            <p>Por favor elige el servidor al que deseas conectarte.</p>
+            <div class="server-options">
+                <button id="local-server-btn" class="glass-btn primary">
+                    <span class="btn-title">ENTORNO LOCAL</span>
+                    <span class="btn-url">http://127.0.0.1:8000</span>
+                </button>
+                <button id="dev-server-btn" class="glass-btn secondary">
+                    <span class="btn-title">DESARROLLO</span>
+                    <span class="btn-url">test.sapius.com.mx</span>
+                </button>
+                <button id="prod-server-btn" class="glass-btn">
+                    <span class="btn-title">PRODUCCIÓN</span>
+                    <span class="btn-url">sapius.com.mx</span>
+                </button>
+            </div>
+        </div>
+
+        <div id="login-view" class="hidden">
+            <h2 class="welcome-text">Bienvenido de nuevo</h2>
+            <p class="subtitle">Ingresa tus credenciales para acceder a tus cursos</p>
+            
+            <div class="form-group">
+                <input type="text" id="username" placeholder="Usuario" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <input type="password" id="password" placeholder="Contraseña" required>
+            </div>
+            <button id="login-btn" class="glass-btn primary full-width">Iniciar Sesión</button>
+        </div>
+
+        <div id="loading-view" class="hidden">
+            <div class="loader-container">
+                <div class="spinner"></div>
+                <p>Verificando dispositivo e iniciando sesión...</p>
+            </div>
+        </div>
+        
+        <div id="status-msg" class="status"></div>
+    </div>
+    <script src="../js/auth.js"></script>
+</body>
+</html>

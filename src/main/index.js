@@ -4,9 +4,8 @@ const fs = require('fs');
 const http = require('http');
 const axios = require('axios');
 
-// Cargar variables de entorno (Simple .env parser si no está dotenv)
 function loadEnv() {
-    const envPath = path.join(__dirname, '.env');
+    const envPath = path.join(__dirname, '../../.env');
     if (fs.existsSync(envPath)) {
         const envContent = fs.readFileSync(envPath, 'utf8');
         envContent.split('\n').forEach(line => {
@@ -28,10 +27,8 @@ let isQuitting = false;
 let BASE_URL = 'http://127.0.0.1:8000'; // Default
 let API_URL = `${BASE_URL}/api`;
 
-// Deshabilitar advertencias de SSL para desarrollo local con Laragon
 app.commandLine.appendSwitch('ignore-certificate-errors');
 
-// Sistema de logs en archivo
 const logPath = path.join(app.getPath('userData'), 'sapius-detector.log');
 function log(msg, type = 'INFO') {
     const timestamp = new Date().toISOString();
@@ -39,24 +36,15 @@ function log(msg, type = 'INFO') {
     console.log(formattedMsg.trim());
     try {
         fs.appendFileSync(logPath, formattedMsg);
-    } catch (e) {
-        console.error('No se pudo escribir en el log:', e);
-    }
+    } catch (e) {}
 }
 
-// Servidor de Puente (Bridge) para navegadores externos
 function startBridgeServer() {
     const bridgeServer = http.createServer((req, res) => {
-        // Manejar CORS
         res.setHeader('Access-Control-Allow-Origin', '*');
         res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
         res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-        if (req.method === 'OPTIONS') {
-            res.writeHead(204);
-            res.end();
-            return;
-        }
+        if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
 
         if (req.url === '/mac' && req.method === 'GET') {
             const interfaces = require('os').networkInterfaces();
@@ -64,59 +52,49 @@ function startBridgeServer() {
             for (const name of Object.keys(interfaces)) {
                 for (const iface of interfaces[name]) {
                     if (!iface.internal && iface.mac && iface.mac !== '00:00:00:00:00:00') {
-                        mac = iface.mac;
-                        break;
+                        mac = iface.mac; break;
                     }
                 }
                 if (mac !== 'UNKNOWN') break;
             }
             res.writeHead(200, { 'Content-Type': 'application/json' });
             res.end(JSON.stringify({ mac }));
-            log(`Bridge solicitada: Enviando MAC ${mac}`);
         } else {
-            res.writeHead(404);
-            res.end();
+            res.writeHead(404); res.end();
         }
     });
-
-    bridgeServer.listen(3005, '0.0.0.0', () => {
-        log('Servidor Puente activo en http://0.0.0.0:3005');
-    });
-
-    bridgeServer.on('error', (err) => {
-        log(`Error en Servidor Puente: ${err.message}`, 'ERROR');
-    });
+    bridgeServer.listen(3005, '0.0.0.0');
 }
 
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1200,
         height: 800,
-        backgroundColor: '#002146',
-        icon: path.join(__dirname, 'icon.png'), // Placeholder for icon
+        backgroundColor: '#0f172a',
+        icon: path.join(__dirname, '../../tray_icon.png'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
             contextIsolation: true,
-            sandbox: false, // Permitir modulos de node en preload
+            sandbox: false,
             webviewTag: true
         }
     });
 
-    mainWindow.loadFile('index.html');
+    mainWindow.loadFile(path.join(__dirname, '../renderer/views/login.html'));
     
-    // Escuchar la consola de la página web cargada y enviarla a los logs de Electron
-    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
-        log(`[PAGE CONSOLE] [Level:${level}] ${message} (Source: ${sourceId}:${line})`, 'PAGE_CONSOLE');
-    });
-    
-    // Interceptar el botón de cerrar (X)
     mainWindow.on('close', (event) => {
         if (!isQuitting) {
             event.preventDefault();
             mainWindow.hide();
-            log('Ventana oculta en segundo plano.');
         }
+    });
+
+    // Capturar logs de la consola de la página web para depuración
+    mainWindow.webContents.on('console-message', (event, level, message, line, sourceId) => {
+        const levels = ['DEBUG', 'INFO', 'WARN', 'ERROR'];
+        const lvl = levels[level] || 'INFO';
+        log(`[PAGE CONSOLE] (${path.basename(sourceId)}:${line}) ${message}`, lvl);
     });
 
     // Inyectar el encabezado X-Sapius-MAC en todas las peticiones a la plataforma de forma dinámica
@@ -146,112 +124,104 @@ app.whenReady().then(() => {
     createWindow();
     startBridgeServer();
     
-    // Registrar atajo para DevTools (F12)
     globalShortcut.register('F12', () => {
         const win = BrowserWindow.getFocusedWindow();
-        if (win) {
-            win.webContents.toggleDevTools();
-            log('DevTools toggled via F12');
-        }
+        if (win) win.webContents.toggleDevTools();
     });
 
-    log(`Aplicación iniciada. Logs guardados en: ${logPath}`);
-
-    // Crear Icono en Bandeja (Tray)
-    const iconPath = path.join(__dirname, 'tray_icon.png');
+    const iconPath = path.join(__dirname, '../../tray_icon.png');
     const icon = nativeImage.createFromPath(iconPath);
     appIcon = new Tray(icon.resize({ width: 16, height: 16 }));
     
     const contextMenu = Menu.buildFromTemplate([
-        { 
-            label: 'Abrir Sapius Detector', 
-            click: () => mainWindow.show() 
-        },
+        { label: 'Abrir Sapius', click: () => mainWindow.show() },
         { type: 'separator' },
-        { 
-            label: 'Salir Completamente', 
-            click: () => {
-                isQuitting = true;
-                app.quit();
-            } 
-        }
+        { label: 'Salir', click: () => { isQuitting = true; app.quit(); } }
     ]);
-
-    appIcon.setToolTip('Sapius | MAC Detector Activo');
+    appIcon.setToolTip('Sapius | Plataforma Activa');
     appIcon.setContextMenu(contextMenu);
-
-    // Click en el icono restaura la ventana
-    appIcon.on('click', () => {
-        mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
-    });
+    appIcon.on('click', () => mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show());
 });
 
-app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        // No cerrar, dejar que el tray maneje la app
-    }
-});
-
-// IPC Authentication Handlers
+// IPC Handlers
 ipcMain.handle('auth:login', async (event, credentials) => {
     try {
-        log(`Intentando login para el usuario: ${credentials.username}`);
         const response = await axios.post(`${API_URL}/login`, credentials, { timeout: 10000 });
         apiToken = response.data.api_token;
-        log('Login exitoso.');
         return { success: true, data: response.data };
     } catch (error) {
-        log(`Error de login: ${error.message}`, 'ERROR');
-        return { success: false, message: error.response?.data?.message || 'Error de conexión con el servidor (Timeout o Red).' };
+        return { success: false, message: error.response?.data?.message || 'Error de conexión.' };
     }
 });
 
 ipcMain.handle('auth:validate-mac', async (event, mac) => {
     userMac = mac;
     try {
-        log(`Validando MAC: ${mac}`);
         const response = await axios.post(`${API_URL}/validate-mac`, 
             { mac_address: mac },
-            { 
-                headers: { 'Authorization': `Bearer ${apiToken}` },
-                timeout: 10000
-            }
+            { headers: { 'Authorization': `Bearer ${apiToken}` }, timeout: 10000 }
         );
-        log(`Resultado validación: ${response.data.success ? 'ÉXITO' : 'FALLO'}`);
         return response.data;
     } catch (error) {
-        log(`Error de validación MAC: ${error.message}`, 'ERROR');
-        return { success: false, message: error.response?.data?.message || 'Error al validar hardware.' };
+        return { success: false, message: error.response?.data?.message || 'Error de validación.' };
     }
 });
 
-ipcMain.on('open-platform', () => {
-    // Redirigir a la plataforma una vez validado
-    log(`Redirigiendo a: ${BASE_URL}/home`);
-    mainWindow.loadURL(`${BASE_URL}/home`);
+ipcMain.on('open-dashboard', () => {
+    mainWindow.loadFile(path.join(__dirname, '../renderer/views/dashboard.html'));
 });
 
 ipcMain.on('auth:logout', () => {
     apiToken = '';
     userMac = '';
-    mainWindow.loadFile(path.join(__dirname, 'src/renderer/views/login.html'));
+    mainWindow.loadFile(path.join(__dirname, '../renderer/views/login.html'));
 });
+
+ipcMain.handle('api:get', async (event, endpoint) => {
+    try {
+        const response = await axios.get(`${API_URL}${endpoint}`, {
+            headers: { 'Authorization': `Bearer ${apiToken}`, 'X-Sapius-MAC': userMac }
+        });
+        return { success: true, data: response.data.data };
+    } catch (error) {
+        return { success: false, message: error.response?.data?.message || 'Error api.' };
+    }
+});
+
+ipcMain.handle('api:post', async (event, { endpoint, payload, isMultipart = false }) => {
+    try {
+        let headers = {
+            'Authorization': `Bearer ${apiToken}`,
+            'X-Sapius-MAC': userMac
+        };
+
+        let data = payload;
+
+        if (isMultipart) {
+            // If it's multipart, we'll let axios handle it, but payload should be prepared.
+            // Or the renderer can use standard fetch as headers are intercepted!
+            // However, having a fallback is nice.
+        }
+
+        const response = await axios.post(`${API_URL}${endpoint}`, data, { headers });
+        return { success: true, data: response.data.data || response.data };
+    } catch (error) {
+        return { success: false, message: error.response?.data?.message || 'Error api.' };
+    }
+});
+
+ipcMain.handle('get-env-urls', () => ({
+    dev: process.env.DEV_URL || 'https://test.sapius.com.mx',
+    prod: process.env.PROD_URL || 'https://sapius.com.mx',
+    local: process.env.LOCAL_URL || 'http://127.0.0.1:8000'
+}));
 
 ipcMain.handle('set-server-url', (event, url) => {
     BASE_URL = url;
     API_URL = `${BASE_URL}/api`;
-    log(`Servidor configurado a: ${BASE_URL}`);
     return { success: true };
 });
 
-ipcMain.handle('get-env-urls', () => {
-    return {
-        dev: process.env.DEV_URL || 'https://test.sapius.com.mx',
-        prod: process.env.PROD_URL || 'https://sapius.com.mx',
-        local: process.env.LOCAL_URL || 'http://127.0.0.1:8000'
-    };
-});
+ipcMain.handle('get-base-url', () => BASE_URL);
 
-ipcMain.on('log-message', (event, { msg, type }) => {
-    log(`[RENDERER] ${msg}`, type);
-});
+ipcMain.on('log-message', (event, { msg, type }) => log(`[RENDERER] ${msg}`, type));
