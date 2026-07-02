@@ -43,7 +43,12 @@ function registerStrikeFromMain(action, details) {
         if (response.data.status === 'blocked') {
             log('Cuenta bloqueada. Redirigiendo a locked.html');
             if (mainWindow) {
-                mainWindow.loadFile(path.join(__dirname, '../renderer/views/locked.html'));
+                const isDev = !app.isPackaged;
+                if (isDev) {
+                    mainWindow.loadURL('http://localhost:5173?view=locked');
+                } else {
+                    mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'), { query: { view: 'locked' } });
+                }
             }
         } else {
             if (mainWindow) {
@@ -184,7 +189,12 @@ function createWindow() {
     // Desactivado temporalmente para permitir compartir pantalla en reuniones
     mainWindow.setContentProtection(false);
 
-    mainWindow.loadFile(path.join(__dirname, '../renderer/views/login.html'));
+    const isDev = !app.isPackaged;
+    if (isDev) {
+        mainWindow.loadURL('http://localhost:5173');
+    } else {
+        mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
+    }
 
     // Interceptar atajos de teclado del estudiante
     mainWindow.webContents.on('before-input-event', (event, input) => {
@@ -299,6 +309,23 @@ function createWindow() {
             callback({ requestHeaders: details.requestHeaders });
         }
     );
+
+    // Habilitar CORS dinámicamente para peticiones a dominios de Sapius (evita bloqueos de origen cruzado en desarrollo)
+    session.defaultSession.webRequest.onHeadersReceived(
+        { urls: ['*://*/*'] },
+        (details, callback) => {
+            const responseHeaders = details.responseHeaders;
+            const url = details.url;
+            const isSapius = url.startsWith(BASE_URL) || url.includes('sapius.com.mx');
+
+            if (isSapius) {
+                responseHeaders['Access-Control-Allow-Origin'] = ['*'];
+                responseHeaders['Access-Control-Allow-Headers'] = ['*'];
+                responseHeaders['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS, PUT, DELETE'];
+            }
+            callback({ responseHeaders });
+        }
+    );
 }
 
 app.whenReady().then(() => {
@@ -393,14 +420,25 @@ ipcMain.handle('auth:validate-mac', async (event, mac) => {
 });
 
 ipcMain.on('open-dashboard', () => {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/views/dashboard.html'));
+    const isDev = !app.isPackaged;
+    if (isDev) {
+        mainWindow.loadURL('http://localhost:5173');
+    } else {
+        mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
+    }
 });
 
 ipcMain.on('auth:logout', () => {
     apiToken = '';
     userMac = '';
     userRole = '';
-    mainWindow.loadFile(path.join(__dirname, '../renderer/views/login.html'));
+    
+    const isDev = !app.isPackaged;
+    if (isDev) {
+        mainWindow.loadURL('http://localhost:5173');
+    } else {
+        mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
+    }
 });
 
 ipcMain.handle('api:get', async (event, endpoint) => {
