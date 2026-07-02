@@ -1,24 +1,25 @@
 {
-  "name": "sapiusmacdetecter",
-  "version": "1.0.0",
-  "description": "Detector de direccion mac para servicio sapius",
+  "name": "sapiusdesktop",
+  "version": "1.0.6",
+  "description": "Aula virtual de Sapius para escritorio",
   "license": "ISC",
   "author": "marencocode",
   "type": "commonjs",
   "main": "src/main/index.js",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder build --win",
+    "build": "electron-builder build --win -p always",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "build": {
-    "appId": "com.sapius.macdetecter",
-    "productName": "Sapius MAC Detector",
+    "appId": "com.sapius.desktop",
+    "productName": "Sapius Desktop",
     "directories": {
       "output": "dist"
     },
     "win": {
       "target": "nsis",
+      "icon": "tray_icon.png",
       "cscLink": "dev-certificate.pfx",
       "cscKeyPassword": "SapiusDev2026"
     },
@@ -27,14 +28,22 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "Sapius MAC Detector"
-    }
+      "shortcutName": "Sapius Desktop",
+      "language": "1034"
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://sapius.com.mx/updates/detector"
+      }
+    ]
   },
   "devDependencies": {
     "electron": "^41.2.0",
     "electron-builder": "^25.0.0"
   },
   "dependencies": {
-    "axios": "^1.15.0"
+    "axios": "^1.15.0",
+    "electron-updater": "^6.8.9"
   }
 }

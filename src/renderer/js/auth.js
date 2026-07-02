@@ -1,4 +1,9 @@
 document.addEventListener('DOMContentLoaded', async () => {
+    const splashView = document.getElementById('splash-view');
+    const splashStatus = document.getElementById('splash-status');
+    const splashProgressContainer = document.getElementById('splash-progress-container');
+    const splashProgressBar = document.getElementById('splash-progress-bar');
+
     const serverSelectionView = document.getElementById('server-selection-view');
     const loginView = document.getElementById('login-view');
     const loadingView = document.getElementById('loading-view');
@@ -12,9 +17,77 @@ document.addEventListener('DOMContentLoaded', async () => {
     const passwordInput = document.getElementById('password');
 
     let currentServer = '';
+    let isTransitioned = false;
+
+    // Timeout de seguridad: Si no responde en 5 segundos, pasar al login por si falla la conexión
+    const safetyTimeout = setTimeout(() => {
+        transitionToSelector();
+    }, 5000);
+
+    function transitionToSelector() {
+        if (isTransitioned) return;
+        isTransitioned = true;
+        clearTimeout(safetyTimeout);
+        if (splashView) splashView.classList.add('hidden');
+        if (serverSelectionView) serverSelectionView.classList.remove('hidden');
+    }
+
+    // Configurar escuchadores de eventos del actualizador para el Loader Inicial
+    if (window.sapiusAPI.onUpdateAvailable) {
+        window.sapiusAPI.onUpdateAvailable((info) => {
+            clearTimeout(safetyTimeout);
+            if (splashStatus) splashStatus.innerText = `Descargando actualización v${info.version}...`;
+            if (splashProgressContainer) splashProgressContainer.classList.remove('hidden');
+        });
+
+        window.sapiusAPI.onUpdateDownloadProgress((percent) => {
+            const rounded = Math.round(percent);
+            if (splashProgressBar) splashProgressBar.style.width = `${rounded}%`;
+            if (splashStatus) splashStatus.innerText = `Descargando actualización... ${rounded}%`;
+        });
+
+        window.sapiusAPI.onUpdateDownloaded((info) => {
+            if (splashStatus) splashStatus.innerText = "Instalando actualización y reiniciando...";
+            setTimeout(() => {
+                window.sapiusAPI.quitAndInstall();
+            }, 1000);
+        });
+
+        window.sapiusAPI.onUpdateNotAvailable(() => {
+            transitionToSelector();
+        });
+
+        window.sapiusAPI.onUpdaterError((err) => {
+            console.warn("Error del actualizador al iniciar:", err);
+            transitionToSelector();
+        });
+        
+        // Forzar chequeo inicial
+        window.sapiusAPI.checkForUpdates();
+    } else {
+        transitionToSelector();
+    }
 
     // Obtener URLs de entorno desde el main process
     const envUrls = await window.sapiusAPI.getEnvUrls();
+
+    // Mostrar versión en la esquina inferior
+    try {
+        const version = await window.sapiusAPI.getAppVersion();
+        const verDiv = document.createElement('div');
+        verDiv.style.cssText = `
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            font-size: 11px;
+            color: #64748b;
+            z-index: 9999;
+            pointer-events: none;
+            user-select: none;
+        `;
+        verDiv.textContent = `v${version}`;
+        document.body.appendChild(verDiv);
+    } catch(e) {}
 
     // Actualizar visualización del botón local
     if (envUrls.local && localServerBtn) {
@@ -103,6 +176,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const macRes = await window.sapiusAPI.validateMac(macAddress);
 
             if (!macRes.success) {
+                if (macRes.is_blocked) {
+                    window.sapiusAPI.logToServer(`Usuario bloqueado durante validación MAC. Redirigiendo a locked.html`);
+                    window.location.href = 'locked.html';
+                    return;
+                }
                 showStatus(macRes.message || 'Error de autorización del dispositivo.');
                 restoreLoginForm();
                 return;

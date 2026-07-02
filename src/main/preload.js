@@ -22,5 +22,16 @@ contextBridge.exposeInMainWorld('sapiusAPI', {
     logToServer: (msg, type = 'INFO') => ipcRenderer.send('log-message', { msg, type }),
     apiGet: (endpoint) => ipcRenderer.invoke('api:get', endpoint),
     apiPost: (endpoint, payload, isMultipart = false) => ipcRenderer.invoke('api:post', { endpoint, payload, isMultipart }),
-    getBaseUrl: () => ipcRenderer.invoke('get-base-url')
+    getBaseUrl: () => ipcRenderer.invoke('get-base-url'),
+    onShowWarningStrike: (callback) => ipcRenderer.on('show-warning-strike', (event, data) => callback(data)),
+    
+    // Auto Updater API
+    onUpdateAvailable: (callback) => ipcRenderer.on('updater:update-available', (event, info) => callback(info)),
+    onUpdateNotAvailable: (callback) => ipcRenderer.on('updater:update-not-available', (event, info) => callback(info)),
+    onUpdateDownloadProgress: (callback) => ipcRenderer.on('updater:download-progress', (event, progress) => callback(progress)),
+    onUpdateDownloaded: (callback) => ipcRenderer.on('updater:update-downloaded', (event, info) => callback(info)),
+    onUpdaterError: (callback) => ipcRenderer.on('updater:error', (event, err) => callback(err)),
+    quitAndInstall: () => ipcRenderer.send('updater:quit-and-install'),
+    checkForUpdates: () => ipcRenderer.send('updater:check-for-updates'),
+    getAppVersion: () => ipcRenderer.invoke('get-app-version')
 });

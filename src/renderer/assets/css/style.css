@@ -227,89 +227,215 @@ input[type="text"]:focus, input[type="password"]:focus {
 
 /* SIDEBAR */
 .sidebar {
-    width: 280px;
-    background: var(--bg-slate-800);
+    width: 250px;
+    background: linear-gradient(180deg, rgba(30, 41, 59, 0.95) 0%, rgba(15, 23, 42, 0.98) 100%);
+    backdrop-filter: blur(20px);
     border-right: 1px solid var(--glass-border);
     display: flex;
     flex-direction: column;
-    padding: 2rem 1.5rem;
+    padding: 1.75rem 1.25rem;
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1), padding 0.3s ease;
+    overflow-x: hidden;
+    position: relative;
+    z-index: 100;
+}
+
+/* Sistema Colapsable */
+.dashboard-layout.sidebar-collapsed .sidebar {
+    width: 75px;
+    padding: 1.75rem 0.5rem;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar:hover {
+    width: 250px;
+    padding: 1.75rem 1.25rem;
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.5);
+}
+
+.sidebar .logo span,
+.sidebar .version,
+.sidebar .user-info,
+.sidebar .nav-item span:last-child,
+.sidebar .mac-indicator span:last-child {
+    transition: opacity 0.2s ease, width 0.2s ease;
+    opacity: 1;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar .logo span,
+.dashboard-layout.sidebar-collapsed .sidebar .version,
+.dashboard-layout.sidebar-collapsed .sidebar .user-info,
+.dashboard-layout.sidebar-collapsed .sidebar .nav-item span:last-child,
+.dashboard-layout.sidebar-collapsed .sidebar .mac-indicator span:last-child {
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    display: inline-block;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar:hover .logo span,
+.dashboard-layout.sidebar-collapsed .sidebar:hover .version,
+.dashboard-layout.sidebar-collapsed .sidebar:hover .user-info,
+.dashboard-layout.sidebar-collapsed .sidebar:hover .nav-item span:last-child,
+.dashboard-layout.sidebar-collapsed .sidebar:hover .mac-indicator span:last-child {
+    opacity: 1;
+    width: auto;
+    display: inline;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar .user-badge {
+    padding: 0.4rem;
+    justify-content: center;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar:hover .user-badge {
+    padding: 0.6rem 0.8rem;
+    justify-content: flex-start;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar .logo {
+    text-align: center;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar:hover .logo {
+    text-align: left;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar .nav-item {
+    justify-content: center;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar:hover .nav-item {
+    justify-content: flex-start;
+}
+
+/* Manejo del botón de salida colapsable */
+.sidebar #logout-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar #logout-btn .logout-icon {
+    font-size: 1.1rem;
+    display: inline-block;
+}
+
+.sidebar #logout-btn .logout-text {
+    display: inline;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar #logout-btn .logout-text {
+    display: none;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar:hover #logout-btn .logout-text {
+    display: inline;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar #logout-btn {
+    padding: 0;
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    margin: 0 auto;
+}
+
+.dashboard-layout.sidebar-collapsed .sidebar:hover #logout-btn {
+    padding: 0.6rem 1rem;
+    width: 100%;
+    height: auto;
+    border-radius: 0.75rem;
 }
 
 .sidebar-header {
-    margin-bottom: 2.5rem;
+    margin-bottom: 2.25rem;
 }
 
 .sidebar-header .logo {
-    font-size: 2.25rem;
-    margin-bottom: 1.5rem;
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: 1px;
+    margin-bottom: 1.25rem;
     text-align: left;
+    text-transform: uppercase;
 }
 
 .user-badge {
     display: flex;
     align-items: center;
     gap: 0.75rem;
-    background: rgba(15, 23, 42, 0.4);
-    padding: 0.75rem 1rem;
-    border-radius: 1rem;
-    border: 1px solid var(--glass-border);
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    padding: 0.75rem;
+    border-radius: 0.75rem;
 }
 
 .avatar {
-    width: 40px;
-    height: 40px;
-    background: var(--secondary-blue);
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--secondary-blue) 0%, #1d4ed8 100%);
     color: white;
-    font-size: 1.25rem;
-    font-weight: 800;
+    font-size: 1.15rem;
+    font-weight: 700;
     display: flex;
     justify-content: center;
     align-items: center;
     border-radius: 50%;
+    flex-shrink: 0;
+    box-shadow: 0 4px 10px rgba(52, 144, 220, 0.2);
 }
 
 .user-info h4 {
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    width: 160px;
+    width: 130px;
+    color: var(--text-white);
 }
 
 .user-info span {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--text-muted);
 }
 
 .sidebar-nav {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
     flex-grow: 1;
 }
 
 .nav-item {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 0.9rem 1.25rem;
+    gap: 0.9rem;
+    padding: 0.8rem 1.1rem;
     border-radius: 0.75rem;
     color: var(--text-muted);
     text-decoration: none;
     font-weight: 500;
-    transition: all 0.2s ease;
+    font-size: 0.95rem;
+    transition: all 0.25s ease;
+    border-left: 3px solid transparent;
 }
 
 .nav-item:hover {
     color: var(--text-white);
-    background: var(--glass-hover);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .nav-item.active {
     color: var(--text-white);
-    background: var(--secondary-blue);
-    box-shadow: 0 4px 12px rgba(52, 144, 220, 0.3);
+    background: rgba(52, 144, 220, 0.1);
+    border-left-color: var(--secondary-blue);
+    font-weight: 600;
 }
 
 .sidebar-footer {
@@ -340,7 +466,7 @@ input[type="text"]:focus, input[type="password"]:focus {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    padding: 2.5rem 3rem;
+    padding: 1.5rem 2rem;
     overflow-y: auto;
 }
 
@@ -348,13 +474,13 @@ input[type="text"]:focus, input[type="password"]:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 2.5rem;
-    padding-bottom: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
     border-bottom: 1px solid var(--glass-border);
 }
 
 .content-header h1 {
-    font-size: 2.25rem;
+    font-size: 1.65rem;
     font-weight: 700;
     letter-spacing: -0.5px;
 }
@@ -388,8 +514,8 @@ input[type="text"]:focus, input[type="password"]:focus {
 .glass-card {
     background: var(--glass-bg);
     border: 1px solid var(--glass-border);
-    border-radius: 1.25rem;
-    padding: 2rem;
+    border-radius: 1rem;
+    padding: 1.25rem;
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
@@ -421,45 +547,94 @@ input[type="text"]:focus, input[type="password"]:focus {
     display: flex;
     flex-direction: column;
     height: 100%;
+    padding: 0 !important;
+    overflow: hidden;
+}
+
+.course-card-image-wrapper {
+    width: 100%;
+    height: 140px;
+    background: linear-gradient(135deg, #071424 0%, #002146 100%);
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--glass-border);
+}
+
+.course-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.course-card:hover .course-card-image {
+    transform: scale(1.05);
+}
+
+.course-card-image-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2.5rem;
+    background: radial-gradient(circle at center, rgba(52, 144, 220, 0.15) 0%, transparent 80%);
+}
+
+.course-card-content {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
 }
 
 .course-card-header {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 1.5rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
 }
 
 .course-category-badge {
-    background: rgba(255, 127, 80, 0.15);
+    background: rgba(255, 127, 80, 0.12);
     color: var(--accent-coral);
-    padding: 0.25rem 0.75rem;
+    padding: 0.2rem 0.5rem;
     border-radius: 50px;
-    font-size: 0.75rem;
+    font-size: 0.65rem;
     font-weight: 700;
     text-transform: uppercase;
 }
 
-.course-progress-radial {
-    font-size: 1.5rem;
-    font-weight: 700;
+.course-code-badge {
+    background: rgba(52, 144, 220, 0.12);
     color: var(--secondary-blue);
+    padding: 0.2rem 0.5rem;
+    border-radius: 50px;
+    font-size: 0.65rem;
+    font-weight: 700;
 }
 
 .course-card h3 {
-    font-size: 1.35rem;
+    font-size: 1.1rem;
     font-weight: 700;
     line-height: 1.3;
-    margin-bottom: 1rem;
+    margin-bottom: 0.35rem;
     flex-grow: 1;
+    color: var(--text-white);
+}
+
+.course-card .subtitle {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
 }
 
 .course-meta {
-    font-size: 0.85rem;
+    font-size: 0.75rem;
     color: var(--text-muted);
     border-top: 1px solid var(--glass-border);
-    padding-top: 1rem;
-    margin-top: 1.5rem;
+    padding-top: 0.5rem;
+    margin-top: auto;
 }
 
 /* BACK BUTTON */
@@ -498,7 +673,7 @@ input[type="text"]:focus, input[type="password"]:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.5rem 2rem;
+    padding: 0.85rem 1.25rem;
     cursor: pointer;
     background: rgba(255, 255, 255, 0.02);
     transition: background 0.2s ease;
@@ -542,10 +717,10 @@ input[type="text"]:focus, input[type="password"]:focus {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.5rem;
+    padding: 0.65rem 1rem;
     background: var(--bg-slate-800);
     border: 1px solid var(--glass-border);
-    border-radius: 0.75rem;
+    border-radius: 0.5rem;
     cursor: pointer;
     transition: all 0.2s ease;
 }
@@ -598,29 +773,29 @@ input[type="text"]:focus, input[type="password"]:focus {
 /* LESSON DETAIL GRID */
 .lesson-content-grid {
     display: grid;
-    grid-template-columns: 2fr 1fr;
-    gap: 2.5rem;
+    grid-template-columns: 72% 28%;
+    gap: 1.25rem;
     align-items: start;
 }
 
 .lesson-main {
     display: flex;
     flex-direction: column;
-    gap: 2rem;
+    gap: 1.25rem;
 }
 
 .lesson-main h2 {
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 700;
 }
 
 .lesson-text-content {
     background: var(--bg-slate-800);
     border: 1px solid var(--glass-border);
-    border-radius: 1rem;
-    padding: 2rem;
-    line-height: 1.7;
-    font-size: 1.05rem;
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    line-height: 1.6;
+    font-size: 0.95rem;
 }
 
 .lesson-sidebar {
@@ -656,7 +831,21 @@ input[type="text"]:focus, input[type="password"]:focus {
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    max-height: 700px;
+    max-height: 620px;
+    transition: all 0.3s ease;
+}
+
+#pdf-container:fullscreen {
+    max-height: none !important;
+    height: 100vh !important;
+    width: 100vw !important;
+    border-radius: 0 !important;
+    border: none !important;
+    background: #090d16 !important;
+}
+
+#pdf-container:fullscreen .pdf-scroll-area {
+    height: calc(100vh - 60px) !important;
 }
 
 .pdf-toolbar {
@@ -680,11 +869,25 @@ input[type="text"]:focus, input[type="password"]:focus {
     padding: 1.5rem;
     display: flex;
     justify-content: center;
+    align-items: flex-start;
 }
 
 #pdf-canvas {
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
     background-color: white;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.2s ease;
+    transform-origin: top center;
+}
+
+/* Transiciones animadas estilo revista */
+.pdf-slide-out {
+    opacity: 0;
+    transform: translateX(-50px) scale(0.95) !important;
+}
+
+.pdf-slide-in {
+    opacity: 0;
+    transform: translateX(50px) scale(0.95) !important;
 }
 
 /* COMPLETION CARD */

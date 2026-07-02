@@ -11,7 +11,18 @@
     <div class="glass-container auth-box">
         <div class="logo">SAPIUS<span>.</span></div>
 
-        <div id="server-selection-view">
+        <!-- SPLASH SCREEN / LOADER PARA ACTUALIZACIONES -->
+        <div id="splash-view">
+            <div class="loader-container" style="text-align: center; padding: 2rem 0;">
+                <div class="spinner" style="margin: 0 auto 1.5rem auto; width: 40px; height: 40px; border: 3px solid rgba(255,255,255,0.1); border-top-color: var(--secondary-blue); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <p id="splash-status" style="font-weight: 500; font-size: 1.05rem; color: #cbd5e1;">Buscando actualizaciones de Sapius Desktop...</p>
+                <div id="splash-progress-container" class="hidden" style="width: 100%; max-width: 250px; background: rgba(255,255,255,0.05); height: 6px; border-radius: 3px; overflow: hidden; margin: 15px auto 0 auto; position: relative;">
+                    <div id="splash-progress-bar" style="width: 0%; height: 100%; background: var(--secondary-blue); transition: width 0.1s ease;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="server-selection-view" class="hidden">
             <h2>Selecciona un Entorno</h2>
             <p>Por favor elige el servidor al que deseas conectarte.</p>
             <div class="server-options">

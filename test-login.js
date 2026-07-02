@@ -1,16 +1,26 @@
 const axios = require('axios');
+const https = require('https');
 
 const credentials = {
     username: 'marencocode',
     password: 'marencos6359:D'
 };
 
-axios.post('http://127.0.0.1:8000/api/login', credentials, {
-    headers: { 'Accept': 'application/json' }
+const agent = new https.Agent({  
+    rejectUnauthorized: false
+});
+
+axios.post('https://sapius.test/api/login', credentials, {
+    headers: { 'Accept': 'application/json' },
+    httpsAgent: agent
 })
 .then(response => {
     console.log('SUCCESS:', response.data);
 })
 .catch(error => {
-    console.log('ERROR:', error.response ? error.response.data : error.message);
+    console.log('ERROR MESSAGE:', error.message);
+    if (error.response) {
+        console.log('STATUS:', error.response.status);
+        console.log('DATA:', error.response.data);
+    }
 });

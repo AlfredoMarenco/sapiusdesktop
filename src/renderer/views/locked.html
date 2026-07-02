@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sapius | Acceso Bloqueado</title>
+    <link rel="stylesheet" href="../assets/css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="dashboard-body" style="overflow: auto;">
+    <div style="min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; box-sizing: border-box;">
+        <div class="glass-card" style="max-width: 800px; width: 100%; padding: 3rem; text-align: center; border: 2px solid #ef4444;">
+            <div style="font-size: 5rem; color: #ef4444; margin-bottom: 1.5rem;">🔒</div>
+            
+            <h1 style="font-size: 2.2rem; font-weight: 800; color: #f43f5e; margin-bottom: 0.5rem; letter-spacing: -0.5px;">
+                ACCESO BLOQUEADO
+            </h1>
+            <h3 style="font-size: 1.25rem; font-weight: 500; color: #cbd5e1; margin-bottom: 2rem;" id="user-welcome-msg">
+                Se ha suspendido temporalmente el acceso de tu cuenta.
+            </h3>
+
+            <div style="background: rgba(239, 68, 68, 0.05); border: 1px solid rgba(239, 68, 68, 0.15); border-radius: 16px; padding: 1.5rem; text-align: left; margin-bottom: 2.5rem;">
+                <h4 style="color: #fbbf24; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 8px;">
+                    <span>📸</span> Instrucción de Desbloqueo:
+                </h4>
+                <p style="color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin: 0;">
+                    Para recuperar el acceso, por favor <strong>toma una foto de esta pantalla</strong> donde se aprecien con claridad las acciones indebidas detectadas y envíala al departamento de soporte técnico presionando el botón de WhatsApp al final.
+                </p>
+            </div>
+
+            <!-- Semaphore severity card -->
+            <div style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); border-radius: 16px; padding: 1.5rem; text-align: left; margin-bottom: 2.5rem;" id="severity-card">
+                <h4 style="font-weight: 700; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;" id="severity-title">
+                    <span>Nivel de Gravedad de Infracciones</span>
+                    <span id="severity-badge" style="font-size: 0.85rem; padding: 4px 10px; border-radius: 20px; font-weight: 800; color: white;">Analizando...</span>
+                </h4>
+                <div style="background: rgba(255,255,255,0.05); height: 12px; border-radius: 6px; overflow: hidden; margin-top: 1rem;">
+                    <div id="severity-bar" style="width: 0%; height: 100%; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);"></div>
+                </div>
+            </div>
+
+            <!-- Strikes table -->
+            <div style="text-align: left; margin-bottom: 2.5rem;">
+                <h4 style="font-weight: 700; color: #cbd5e1; margin-bottom: 1rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.5rem;">
+                    Historial de Incidentes Recientes
+                </h4>
+                <div class="homework-table-wrapper" style="overflow-x: auto; background: rgba(0,0,0,0.1); border-radius: 12px;">
+                    <table class="premium-table" style="width: 100%;">
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Acción Detectada</th>
+                                <th>Detalles / Contexto</th>
+                            </tr>
+                        </thead>
+                        <tbody id="strikes-table-body">
+                            <tr>
+                                <td colspan="3" style="text-align: center; color: #64748b; padding: 2rem;">
+                                    Cargando historial de incidentes...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <p style="color: #64748b; font-size: 0.9rem; margin-bottom: 2rem;">
+                El sistema verifica automáticamente tu estado de forma periódica. Si tu tutor/soporte realiza el desbloqueo, esta pantalla se cerrará automáticamente.
+            </p>
+
+            <div style="display: flex; gap: 1.5rem; justify-content: center;">
+                <a id="btn-support-whatsapp" href="https://wa.me/529993648594?text=Hola,%20mi%20cuenta%20Sapius%20ha%20sido%20bloqueada" target="_blank" class="glass-btn success" style="padding: 12px 30px; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 8px; text-decoration: none;">
+                    💬 Contactar Soporte Técnico
+                </a>
+                <button id="btn-logout" class="glass-btn danger" style="padding: 12px 30px; font-weight: 700; border-radius: 10px;">
+                    Cerrar Sesión
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="../js/locked.js"></script>
+</body>
+</html>
