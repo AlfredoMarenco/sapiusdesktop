@@ -186,8 +186,7 @@ function createWindow() {
     mainWindow.removeMenu();
 
     // Activar protección de contenido a nivel de OS (Evita capturas/grabaciones)
-    // Desactivado temporalmente para permitir compartir pantalla en reuniones
-    mainWindow.setContentProtection(false);
+    mainWindow.setContentProtection(true);
 
     const isDev = !app.isPackaged;
     if (isDev) {
@@ -205,8 +204,18 @@ function createWindow() {
         const isShift = input.shift;
         const key = input.key.toLowerCase();
 
+        // Registrar en consola de Electron para depuración
+        log(`[KEYLOG] Tecla: "${input.key}" (code: ${input.code}) | Ctrl/Cmd: ${isCtrlOfTheOS} | Shift: ${isShift}`);
+
         // Solo restringir si el usuario está autenticado y tiene rol 'alumno'
         if (apiToken && userRole !== 'alumno') {
+            return;
+        }
+
+        // Detectar si presionan la combinación Ctrl + Shift sola
+        if (isCtrlOfTheOS && isShift && (key === 'shift' || key === 'control')) {
+            event.preventDefault();
+            registerStrikeFromMain('Restricted Key / Modifier', 'Combinación Ctrl + Shift detectada');
             return;
         }
 
@@ -228,6 +237,13 @@ function createWindow() {
         if (!isMac && input.meta && input.shift && key === 's') {
             event.preventDefault();
             registerStrikeFromMain('Snipping Tool', 'Windows Snipping Tool (Win+Shift+S)');
+            return;
+        }
+
+        // 3.5 Browser Screenshot Shortcut: Ctrl + Shift + S
+        if (isCtrlOfTheOS && isShift && key === 's') {
+            event.preventDefault();
+            registerStrikeFromMain('PrintScreen', 'Browser Screenshot Shortcut (Ctrl+Shift+S)');
             return;
         }
 
@@ -352,6 +368,16 @@ app.whenReady().then(() => {
     });
 
     try {
+        globalShortcut.register('Super+Shift+S', () => {
+            if (apiToken && userRole === 'alumno') {
+                registerStrikeFromMain('Snipping Tool', 'Windows Snipping Tool (Win+Shift+S) detected globally');
+            }
+        });
+    } catch (e) {
+        log('Fallo al registrar atajo global Win+Shift+S');
+    }
+
+    try {
         globalShortcut.register('PrintScreen', () => {
             if (apiToken && userRole === 'alumno') {
                 registerStrikeFromMain('PrintScreen', 'PrintScreen global shortcut pressed');
@@ -360,6 +386,19 @@ app.whenReady().then(() => {
     } catch (e) {
         log('Fallo al registrar atajo global PrintScreen');
     }
+
+    // Monitoreo del portapapeles en segundo plano para detectar capturas de pantalla (Snipping Tool, PrintScreen, etc.)
+    setInterval(() => {
+        if (apiToken && userRole === 'alumno') {
+            const { clipboard } = require('electron');
+            const image = clipboard.readImage();
+            if (!image.isEmpty()) {
+                clipboard.clear();
+                registerStrikeFromMain('PrintScreen', 'Captura de pantalla guardada en portapapeles');
+                log('[CLIPBOARD] Imagen de captura detectada y eliminada del portapapeles.');
+            }
+        }
+    }, 1000);
 
     const iconPath = path.join(__dirname, '../../tray_icon.png');
     const icon = nativeImage.createFromPath(iconPath);
@@ -446,7 +485,8 @@ ipcMain.handle('api:get', async (event, endpoint) => {
         const response = await axios.get(`${API_URL}${endpoint}`, {
             headers: { 'Authorization': `Bearer ${apiToken}`, 'X-Sapius-MAC': userMac }
         });
-        return { success: true, data: response.data.data };
+        const dataVal = response.data && Object.prototype.hasOwnProperty.call(response.data, 'data') ? response.data.data : response.data;
+        return { success: true, data: dataVal };
     } catch (error) {
         return { 
             success: false, 

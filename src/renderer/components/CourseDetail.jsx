@@ -56,8 +56,276 @@ export default function CourseDetail({
   pdfPageNum,
   pdfPageCount,
   onPrevPdfPage,
-  onNextPdfPage
+  onNextPdfPage,
+  pdfDoc,
+  onGoToPdfPage
 }) {
+  const [opinionPending, setOpinionPending] = React.useState(false);
+  const [opinionSubmitting, setOpinionSubmitting] = React.useState(false);
+  const [rating, setRating] = React.useState(5);
+  const [comment, setComment] = React.useState('');
+  const [opinionMsg, setOpinionMsg] = React.useState('');
+
+  const [pdfOutline, setPdfOutline] = React.useState([]);
+  const [showOutline, setShowOutline] = React.useState(false);
+
+  React.useEffect(() => {
+    if (selectedCourse && selectedCourse.globalProgress >= 90) {
+      checkOpinion();
+    }
+  }, [selectedCourse]);
+
+  React.useEffect(() => {
+    if (pdfDoc) {
+      pdfDoc.getOutline().then((outline) => {
+        setPdfOutline(outline || []);
+      }).catch(err => {
+        console.error("Error loading PDF outline:", err);
+        setPdfOutline([]);
+      });
+    } else {
+      setPdfOutline([]);
+      setShowOutline(false);
+    }
+  }, [pdfDoc]);
+
+  const [animatingClass, setAnimatingClass] = React.useState('');
+  const [twoPagesMode, setTwoPagesMode] = React.useState(false);
+  const [pdfScaleLocal, setPdfScaleLocal] = React.useState(1.35);
+
+  const canvasLeftRef = React.useRef(null);
+  const canvasRightRef = React.useRef(null);
+  const viewerContainerRef = React.useRef(null);
+  
+  const pdfRenderTaskLeft = React.useRef(null);
+  const pdfRenderTaskRight = React.useRef(null);
+
+  const renderPageOnCanvas = async (pageNum, canvasElement, renderTaskRef) => {
+    if (!pdfDoc || !canvasElement) return;
+    try {
+      const page = await pdfDoc.getPage(pageNum);
+      const viewport = page.getViewport({ scale: pdfScaleLocal });
+      const context = canvasElement.getContext('2d');
+      canvasElement.height = viewport.height;
+      canvasElement.width = viewport.width;
+
+      if (renderTaskRef.current) {
+        renderTaskRef.current.cancel();
+      }
+
+      const renderContext = {
+        canvasContext: context,
+        viewport: viewport
+      };
+      const renderTask = page.render(renderContext);
+      renderTaskRef.current = renderTask;
+      await renderTask.promise;
+    } catch (err) {
+      if (err.name !== 'RenderingCancelledException') {
+        console.error("Render error page " + pageNum, err);
+      }
+    }
+  };
+
+  React.useEffect(() => {
+    if (pdfDoc) {
+      renderPageOnCanvas(pdfPageNum, canvasLeftRef.current, pdfRenderTaskLeft);
+      
+      if (twoPagesMode && pdfPageNum + 1 <= pdfPageCount) {
+        renderPageOnCanvas(pdfPageNum + 1, canvasRightRef.current, pdfRenderTaskRight);
+      }
+    }
+  }, [pdfDoc, pdfPageNum, pdfScaleLocal, twoPagesMode]);
+
+  const toggleFullscreen = () => {
+    if (!viewerContainerRef.current) return;
+    if (!document.fullscreenElement) {
+      viewerContainerRef.current.requestFullscreen()
+        .then(() => {
+          setTimeout(fitToWidth, 200);
+        })
+        .catch((err) => {
+          console.error("Error going fullscreen:", err);
+        });
+    } else {
+      document.exitFullscreen();
+    }
+  };
+
+  const fitToWidth = async () => {
+    if (!pdfDoc || !viewerContainerRef.current) return;
+    try {
+      const page = await pdfDoc.getPage(pdfPageNum);
+      const viewport = page.getViewport({ scale: 1.0 });
+      const container = viewerContainerRef.current.querySelector('.pdf-scroll-area');
+      if (!container) return;
+      const containerWidth = container.clientWidth - 48;
+      const targetWidth = twoPagesMode ? (containerWidth / 2) - 24 : containerWidth;
+      const targetScale = targetWidth / viewport.width;
+      setPdfScaleLocal(Number(targetScale.toFixed(2)));
+    } catch (err) {
+      console.error("Error fitting to width:", err);
+    }
+  };
+
+  React.useEffect(() => {
+    if (pdfDoc && isGuiasCategory) {
+      setTimeout(() => {
+        if (viewerContainerRef.current && !document.fullscreenElement) {
+          viewerContainerRef.current.requestFullscreen()
+            .then(() => {
+              setTimeout(fitToWidth, 300);
+            })
+            .catch(err => {
+              console.warn("Auto-fullscreen blocked, fitting width locally", err);
+              fitToWidth();
+            });
+        } else {
+          fitToWidth();
+        }
+      }, 800);
+    }
+  }, [pdfDoc, twoPagesMode]);
+
+  const playPageFlipSound = () => {
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (!AudioContext) return;
+      const ctx = new AudioContext();
+      const bufferSize = ctx.sampleRate * 0.35;
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.value = 1200;
+      filter.Q.value = 1.2;
+
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(0.001, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.12, ctx.currentTime + 0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(ctx.destination);
+      noise.start();
+    } catch (e) {
+      console.warn("Audio context not allowed", e);
+    }
+  };
+
+  const triggerNextPage = () => {
+    if (pdfPageNum >= pdfPageCount || animatingClass) return;
+    playPageFlipSound();
+    setAnimatingClass('pdf-page-flip-next');
+    setTimeout(() => {
+      const step = twoPagesMode ? 2 : 1;
+      const nextPage = Math.min(pdfPageNum + step, pdfPageCount);
+      onGoToPdfPage(nextPage);
+      setAnimatingClass('');
+    }, 380);
+  };
+
+  const triggerPrevPage = () => {
+    if (pdfPageNum <= 1 || animatingClass) return;
+    playPageFlipSound();
+    setAnimatingClass('pdf-page-flip-prev');
+    setTimeout(() => {
+      const step = twoPagesMode ? 2 : 1;
+      const prevPage = Math.max(pdfPageNum - step, 1);
+      onGoToPdfPage(prevPage);
+      setAnimatingClass('');
+    }, 380);
+  };
+
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (!pdfPageCount) return;
+      if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        triggerNextPage();
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        triggerPrevPage();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [pdfPageNum, pdfPageCount, animatingClass, twoPagesMode]);
+
+  const checkOpinion = async () => {
+    try {
+      const res = await window.sapiusAPI.apiGet(`/electron/opinion/check/${selectedCourse.curso_programado.id}`);
+      if (res && res.success) {
+        setOpinionPending(res.pending);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleOpinionSubmit = async (e) => {
+    e.preventDefault();
+    if (comment.trim().length < 50) {
+      setOpinionMsg('El comentario debe contener al menos 50 caracteres.');
+      return;
+    }
+    try {
+      setOpinionSubmitting(true);
+      setOpinionMsg('');
+      
+      const payload = {
+        course_id: selectedCourse.curso_programado.id,
+        rating,
+        comment: comment.trim()
+      };
+      
+      const res = await window.sapiusAPI.apiPost('/electron/opinion/submit', payload);
+      if (res && res.success) {
+        setOpinionMsg('¡Gracias por tu opinión! Tu valoración ha sido registrada.');
+        setOpinionPending(false);
+      } else {
+        setOpinionMsg(res.message || 'Error al enviar opinión.');
+      }
+    } catch (err) {
+      console.error(err);
+      setOpinionMsg('Error de red al enviar opinión.');
+    } finally {
+      setOpinionSubmitting(false);
+    }
+  };
+
+  const handleOutlineClick = async (dest) => {
+    if (!dest || !pdfDoc) return;
+    try {
+      let pageIndex = null;
+      if (typeof dest === 'string') {
+        const destObj = await pdfDoc.getDestination(dest);
+        if (destObj && destObj[0]) {
+          pageIndex = await pdfDoc.getPageIndex(destObj[0]);
+        }
+      } else if (Array.isArray(dest)) {
+        if (dest[0]) {
+          pageIndex = await pdfDoc.getPageIndex(dest[0]);
+        }
+      }
+      
+      if (pageIndex !== null) {
+        const targetPage = pageIndex + 1;
+        if (targetPage >= 1 && targetPage <= pdfPageCount) {
+          onGoToPdfPage(targetPage);
+        }
+      }
+    } catch (err) {
+      console.error("Error navigating to outline destination:", err);
+    }
+  };
 
   // Helper: Comprobar si el módulo/clase está desbloqueado según la fecha del cronograma
   const checkIsUnlocked = (item) => {
@@ -176,27 +444,76 @@ export default function CourseDetail({
               <p>Cargando detalles de la clase...</p>
             </div>
           ) : !activeLesson ? (
-            // Mensaje de Bienvenida si no hay lección activa
-            <div className="welcome-pane flex items-center justify-center text-center h-full p-8 my-auto min-h-[250px]">
-              <div className="welcome-text">
-                <span className="text-4xl block mb-4 animate-bounce">🎓</span>
-                <h2 className="text-lg font-bold mt-4 tracking-wide bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">¡Te damos la bienvenida a tu clase!</h2>
-                <p className="text-xs text-slate-500 max-w-sm mx-auto mt-2 leading-relaxed">Selecciona cualquier módulo o clase en el panel inferior para comenzar tu aprendizaje o continuar donde te quedaste.</p>
+            opinionPending ? (
+              // Opinion and Feedback form (Phase 3)
+              <div className="welcome-pane flex flex-col items-center justify-center p-6 sm:p-8 my-auto max-w-xl mx-auto text-center w-full">
+                <span className="text-4xl block mb-2 animate-bounce">⭐</span>
+                <h2 className="text-base sm:text-lg font-bold tracking-wide text-white">¡Has completado gran parte de este curso!</h2>
+                <p className="text-[11px] sm:text-xs text-slate-400 mt-2 leading-relaxed">Tu retroalimentación es muy valiosa para nosotros. Por favor califica tu experiencia y déjanos un comentario.</p>
+                
+                {opinionMsg && (
+                  <div className="mt-3 p-3 bg-white/5 border border-white/10 rounded-xl text-[10px] sm:text-xs text-sapius-naranja font-semibold">
+                    {opinionMsg}
+                  </div>
+                )}
+
+                <form onSubmit={handleOpinionSubmit} className="w-full mt-4 space-y-4">
+                  {/* Rating Selector */}
+                  <div className="flex justify-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setRating(star)}
+                        className={`text-2xl transition-transform hover:scale-115 cursor-pointer ${star <= rating ? 'text-amber-400' : 'text-slate-655'}`}
+                      >
+                        ★
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Comment input */}
+                  <textarea
+                    rows="3"
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    placeholder="Escribe tu opinión del curso aquí (mínimo 50 caracteres)..."
+                    className="w-full p-3 bg-slate-950/40 border border-white/10 rounded-xl text-white text-xs placeholder:text-slate-655 focus:outline-none focus:border-sapius-azul/50 resize-none"
+                    required
+                  />
+
+                  <button
+                    type="submit"
+                    disabled={opinionSubmitting}
+                    className="w-full py-2.5 px-4 bg-sapius-azul hover:bg-sapius-azul/80 disabled:bg-sapius-azul/40 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+                  >
+                    {opinionSubmitting ? 'Enviando opinión...' : 'Enviar Valoración'}
+                  </button>
+                </form>
               </div>
-            </div>
+            ) : (
+              // Mensaje de Bienvenida si no hay lección activa y no hay opinión pendiente
+              <div className="welcome-pane flex items-center justify-center text-center h-full p-8 my-auto min-h-[250px]">
+                <div className="welcome-text">
+                  <span className="text-4xl block mb-4 animate-bounce">🎓</span>
+                  <h2 className="text-lg font-bold mt-4 tracking-wide bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">¡Te damos la bienvenida a tu clase!</h2>
+                  <p className="text-xs text-slate-500 max-w-sm mx-auto mt-2 leading-relaxed">Selecciona cualquier módulo o clase en el panel inferior para comenzar tu aprendizaje o continuar donde te quedaste.</p>
+                </div>
+              </div>
+            )
           ) : (
             // Workspace de Lección Activa Real
             <div className="w-full h-full flex flex-col">
               <div className="flex justify-between items-center mb-6">
                 <button 
-                  onClick={onCloseLesson}
-                  className="bg-white/[0.01] border border-white/10 text-slate-400 text-[10px] font-bold uppercase tracking-wider py-1.5 px-3 rounded-lg hover:text-white hover:bg-slate-800"
+                  onClick={isGuiasCategory ? onBackToCourses : onCloseLesson}
+                  className="bg-white/[0.01] border border-white/10 text-slate-400 text-[10px] font-bold uppercase tracking-wider py-1.5 px-3 rounded-lg hover:text-white hover:bg-slate-800 cursor-pointer"
                 >
-                  ✕ Cerrar Lección
+                  {isGuiasCategory ? '← Volver a Mis Cursos' : '✕ Cerrar Lección'}
                 </button>
               </div>
 
-              <div className="lesson-content-grid grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
+              <div className={`lesson-content-grid grid gap-6 items-start ${isGuiasCategory ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-[1fr_300px]'}`}>
                 
                 {/* Columna Principal: Videos, PDFs, Descripciones */}
                 <div className="lesson-main flex flex-col gap-5">
@@ -224,35 +541,125 @@ export default function CourseDetail({
 
                   {/* Canvas para PDF (Lector PDF.js Seguro) */}
                   {(activeLessonId === 0 || (activeLesson.leccion && activeLesson.leccion.archivo_pdf)) && (
-                    <div className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden flex flex-col max-h-[580px] shadow-lg">
-                      <div className="pdf-toolbar flex justify-center items-center gap-3 bg-slate-950/80 p-3 border-b border-white/5">
-                        <button 
-                          disabled={pdfPageNum <= 1}
-                          onClick={onPrevPdfPage}
-                          className="py-1 px-3 bg-white/[0.02] border border-white/5 rounded-lg text-xs font-semibold hover:bg-white/[0.05] disabled:opacity-50"
-                        >
-                          ‹ Anterior
-                        </button>
-                        <span className="pdf-page-indicator text-[10px] font-bold uppercase tracking-wider text-slate-400 bg-white/[0.02] py-1 px-2.5 border border-white/5 rounded-lg">
-                          Página {pdfPageNum} de {pdfPageCount}
-                        </span>
-                        <button 
-                          disabled={pdfPageNum >= pdfPageCount}
-                          onClick={onNextPdfPage}
-                          className="py-1 px-3 bg-white/[0.02] border border-white/5 rounded-lg text-xs font-semibold hover:bg-white/[0.05] disabled:opacity-50"
-                        >
-                          Siguiente ›
-                        </button>
+                    <div ref={viewerContainerRef} className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden flex flex-col max-h-[720px] shadow-lg">
+                      <div className="pdf-toolbar flex justify-between items-center bg-slate-950/80 p-3.5 border-b border-white/5">
+                        <div className="flex items-center gap-2">
+                          {pdfOutline && pdfOutline.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setShowOutline(!showOutline)}
+                              className={`py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${showOutline ? 'bg-sapius-azul border-sapius-azul text-white' : 'bg-white/[0.02] border-white/5 text-slate-300 hover:bg-white/[0.05]'}`}
+                              title="Mostrar índice"
+                            >
+                              📂 <span className="hidden sm:inline">Índice</span>
+                            </button>
+                          )}
+                          
+                          <button
+                            type="button"
+                            onClick={() => setPdfScaleLocal(prev => Math.min(prev + 0.15, 2.5))}
+                            className="p-1.5 bg-white/[0.02] border border-white/5 rounded-lg text-xs hover:bg-white/[0.05] text-slate-300 font-bold cursor-pointer"
+                            title="Acercar"
+                          >
+                            🔍+
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setPdfScaleLocal(prev => Math.max(prev - 0.15, 0.65))}
+                            className="p-1.5 bg-white/[0.02] border border-white/5 rounded-lg text-xs hover:bg-white/[0.05] text-slate-300 font-bold cursor-pointer"
+                            title="Alejar"
+                          >
+                            🔍-
+                          </button>
+                          <button
+                            type="button"
+                            onClick={fitToWidth}
+                            className="p-1.5 bg-white/[0.02] border border-white/5 rounded-lg text-xs hover:bg-white/[0.05] text-slate-300 font-bold cursor-pointer"
+                            title="Ajustar al ancho"
+                          >
+                            ↔️ <span className="hidden sm:inline">Ajustar Ancho</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setTwoPagesMode(!twoPagesMode)}
+                            className={`py-1.5 px-3 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${twoPagesMode ? 'bg-sapius-azul border-sapius-azul text-white' : 'bg-white/[0.02] border-white/5 text-slate-300 hover:bg-white/[0.05]'}`}
+                            title="Modo libro (Dos páginas)"
+                          >
+                            📖 <span className="hidden lg:inline">{twoPagesMode ? '1 Pág.' : '2 Págs.'}</span>
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          <button 
+                            disabled={pdfPageNum <= 1}
+                            onClick={triggerPrevPage}
+                            className="py-1.5 px-3 bg-white/[0.02] border border-white/5 rounded-lg text-xs font-semibold hover:bg-white/[0.05] disabled:opacity-50 cursor-pointer text-white"
+                          >
+                            ‹ Anterior
+                          </button>
+                          <span className="pdf-page-indicator text-[11px] font-bold uppercase tracking-wider text-slate-300 bg-white/[0.02] py-1.5 px-3 border border-white/5 rounded-lg">
+                            Pág. {pdfPageNum} {twoPagesMode && pdfPageNum + 1 <= pdfPageCount ? ` - ${pdfPageNum + 1}` : ''} / {pdfPageCount}
+                          </span>
+                          <button 
+                            disabled={pdfPageNum >= pdfPageCount || (twoPagesMode && pdfPageNum + 1 >= pdfPageCount)}
+                            onClick={triggerNextPage}
+                            className="py-1.5 px-3 bg-white/[0.02] border border-white/5 rounded-lg text-xs font-semibold hover:bg-white/[0.05] disabled:opacity-50 cursor-pointer text-white"
+                          >
+                            Siguiente ›
+                          </button>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={toggleFullscreen}
+                            className="py-1.5 px-3 bg-white/[0.02] border border-white/5 rounded-lg text-xs hover:bg-white/[0.05] text-slate-300 cursor-pointer flex items-center gap-1.5"
+                            title="Pantalla Completa"
+                          >
+                            📺 <span className="hidden sm:inline">Pantalla Completa</span>
+                          </button>
+                        </div>
                       </div>
-                      <div className="pdf-scroll-area overflow-auto bg-[#050912] p-4 sm:p-6 flex justify-center items-start">
-                        <canvas ref={canvasRef} className="shadow-2xl bg-white"></canvas>
+                      
+                      <div className="flex grow overflow-hidden h-[620px] bg-[#050912]">
+                        {/* Outline/Index Panel */}
+                        {showOutline && pdfOutline && pdfOutline.length > 0 && (
+                          <div className="w-64 border-r border-white/5 bg-slate-950/60 overflow-y-auto p-3 flex flex-col gap-1.5 shrink-0 select-none">
+                            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 mb-2 block">Índice de Temas</span>
+                            {pdfOutline.map((item, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => handleOutlineClick(item.dest)}
+                                className="text-left w-full p-2 rounded-lg text-xs font-medium text-slate-300 hover:bg-white/[0.03] hover:text-white transition-all truncate cursor-pointer block border border-transparent hover:border-white/5"
+                                title={item.title}
+                              >
+                                📄 {item.title}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* PDF Viewport Scroll Area */}
+                        <div className="pdf-scroll-area grow overflow-auto p-4 sm:p-6 flex justify-center items-start h-full pdf-book-container">
+                          <div className={`pdf-page-wrapper flex justify-center items-center gap-6 ${animatingClass}`}>
+                            <div className="shadow-2xl bg-white rounded-lg overflow-hidden border border-white/5 flex-shrink-0">
+                              <canvas ref={canvasLeftRef}></canvas>
+                            </div>
+                            {twoPagesMode && pdfPageNum + 1 <= pdfPageCount && (
+                              <div className="shadow-2xl bg-white rounded-lg overflow-hidden border border-white/5 flex-shrink-0">
+                                <canvas ref={canvasRightRef}></canvas>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
 
                   {/* Descripción / Contenido de Texto Enriquecido */}
                   <div 
-                    className="lesson-text-content bg-slate-900/50 border border-white/5 rounded-2xl p-5 sm:p-6 leading-relaxed text-xs sm:text-sm text-slate-355"
+                    className="lesson-text-content bg-slate-900/50 border border-white/5 rounded-2xl p-6 sm:p-8 leading-relaxed text-base sm:text-lg text-slate-355"
                     dangerouslySetInnerHTML={{ 
                       __html: activeLessonId === 0 
                         ? "<p>Visualiza el material interactivo completo a continuación. Recuerda que la impresión y copia de este archivo están completamente restringidas por derechos de propiedad intelectual.</p>" 
@@ -349,43 +756,27 @@ export default function CourseDetail({
           )}
         </section>
 
-        {/* SECCIÓN INFERIOR: Temario y Acordeón del Curso */}
-        <div className="w-full flex flex-col gap-4 border border-white/5 rounded-2xl p-5 sm:p-6 bg-slate-900/10 backdrop-blur-md">
-          <div className="course-detail-header mb-4">
-            <h2 className="text-sm font-bold text-slate-350 uppercase tracking-wide">Plan de Estudios del Curso</h2>
-            
-            {/* Barra de Progreso Global */}
-            <div className="progress-bar-container max-w-md mt-2">
-              <div className="flex justify-between text-xs text-slate-400 mb-1">
-                <span>{isGuiasCategory ? 'Material de Estudio' : 'Progreso del Curso'}</span>
-                <strong className="text-blue-400">
-                  {isGuiasCategory ? 'Guía Abierta' : `${selectedCourse.globalProgress || 0}%`}
-                </strong>
-              </div>
-              <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-blue-500 transition-all duration-300" 
-                  style={{ width: isGuiasCategory ? '100%' : `${selectedCourse.globalProgress || 0}%` }}
-                ></div>
+        {!isGuiasCategory && (
+          <div className="w-full flex flex-col gap-4 border border-white/5 rounded-2xl p-5 sm:p-6 bg-slate-900/10 backdrop-blur-md">
+            <div className="course-detail-header mb-4">
+              <h2 className="text-sm font-bold text-slate-350 uppercase tracking-wide">Plan de Estudios del Curso</h2>
+              
+              <div className="progress-bar-container max-w-md mt-2">
+                <div className="flex justify-between text-xs text-slate-400 mb-1">
+                  <span>Progreso del Curso</span>
+                  <strong className="text-blue-400">
+                    {`${selectedCourse.globalProgress || 0}%`}
+                  </strong>
+                </div>
+                <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                  <div 
+                    className="h-full bg-blue-500 transition-all duration-300" 
+                    style={{ width: `${selectedCourse.globalProgress || 0}%` }}
+                  ></div>
+                </div>
               </div>
             </div>
-          </div>
 
-          {isGuiasCategory ? (
-            // Renderizado de botón especial para Guías de Estudio
-            <div className="text-center py-6 bg-white/[0.01] border border-white/5 rounded-xl max-w-sm">
-              <span className="text-3xl block mb-2">📖</span>
-              <h3 className="text-xs sm:text-sm font-bold text-slate-200 mb-1">Guía de Contenido</h3>
-              <p className="text-[10px] text-slate-400 mb-4 px-4 leading-relaxed">Puedes visualizarla de forma segura e interactiva a continuación.</p>
-              <button 
-                onClick={() => onSelectLesson(0, cp.id)}
-                className="py-1.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-semibold cursor-pointer shadow-md"
-              >
-                Abrir Guía Segura
-              </button>
-            </div>
-          ) : (
-            // Renderizado del temario en una Lista Vertical de Módulos (stacked below workspace)
             <div className="modules-accordion flex flex-col gap-4">
               {getSortedModules().map((modulo) => {
                 const isExpanded = !!expandedModules[modulo.id];
@@ -394,27 +785,25 @@ export default function CourseDetail({
                 return (
                   <div key={modulo.id} className={`rounded-2xl bg-slate-900/40 border overflow-hidden ${isModuleUnlocked ? 'border-white/5' : 'border-red-500/10 opacity-60'}`}>
                     
-                    {/* Cabecera del Módulo */}
                     <div 
                       onClick={() => isModuleUnlocked && onToggleModule(modulo.id)}
                       className={`flex justify-between items-center py-3 px-4 transition-colors ${isModuleUnlocked ? 'cursor-pointer bg-white/[0.005] hover:bg-white/[0.02]' : 'cursor-not-allowed bg-black/20'}`}
                     >
                       <div className="module-title-box truncate pr-2">
-                        <h3 className="text-xs sm:text-sm font-bold text-slate-100 flex items-center gap-1.5 truncate">
+                        <h3 className="text-sm sm:text-base font-bold text-slate-100 flex items-center gap-1.5 truncate">
                           {!isModuleUnlocked && <span>🔒</span>}
                           {modulo.titulo}
                         </h3>
-                        <span className="text-[9px] text-slate-400 font-medium">
+                        <span className="text-xs text-slate-400 font-medium">
                           {modulo.totalClases} clases • {modulo.completedCount} completadas
                         </span>
                       </div>
                       <div className="module-meta flex items-center gap-2 shrink-0">
-                        <span className="text-[10px] font-bold text-blue-400">{modulo.progress}%</span>
-                        {isModuleUnlocked && <span className="text-[10px] text-slate-400">{isExpanded ? '▲' : '▼'}</span>}
+                        <span className="text-sm font-bold text-blue-400">{modulo.progress}%</span>
+                        {isModuleUnlocked && <span className="text-sm text-slate-400">{isExpanded ? '▲' : '▼'}</span>}
                       </div>
                     </div>
 
-                    {/* Lista de clases dentro del módulo */}
                     {isExpanded && isModuleUnlocked && modulo.clases && (
                       <div className="border-t border-white/5 p-3 bg-black/[0.08] flex flex-col gap-2">
                         {getSortedClases(modulo).map((clase, idx) => {
@@ -430,26 +819,25 @@ export default function CourseDetail({
                                 className={`flex justify-between items-center py-2 px-3 bg-slate-900/50 border rounded-xl cursor-pointer transition-all duration-200 hover:translate-x-0.5 hover:bg-blue-500/5 ${isClassActive ? 'border-blue-500/50 bg-blue-500/5' : 'border-white/5'}`}
                               >
                                 <div className="class-info flex items-center gap-2 truncate pr-1">
-                                  <span className="w-5 h-5 rounded-full bg-slate-800 border border-white/5 flex justify-center items-center font-bold text-[9px] text-slate-450 shrink-0">{idx + 1}</span>
-                                  <span className="font-semibold text-xs text-slate-200 truncate">{clase.titulo}</span>
+                                  <span className="w-6 h-6 rounded-full bg-slate-800 border border-white/5 flex justify-center items-center font-bold text-xs text-slate-450 shrink-0">{idx + 1}</span>
+                                  <span className="font-semibold text-xs sm:text-sm text-slate-200 truncate">{clase.titulo}</span>
                                 </div>
-                                <span className={`py-0.5 px-1.5 rounded-full text-[7px] font-bold uppercase border shrink-0 ${isClassCompleted ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-orange-500/10 text-orange-400 border-orange-500/20'}`}>
+                                <span className={`py-0.5 px-2 rounded-full text-[9px] sm:text-[10px] font-bold uppercase border shrink-0 ${isClassCompleted ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-orange-500/10 text-orange-400 border-orange-500/20'}`}>
                                   {isClassCompleted ? 'Listo' : 'Pendiente'}
                                 </span>
                               </div>
                             );
                           } else {
-                            // Clase Bloqueada
                             return (
                               <div 
                                 key={clase.id}
                                 className="flex justify-between items-center py-2 px-3 bg-slate-900/10 border border-white/[0.02] rounded-xl cursor-not-allowed opacity-50"
                               >
                                 <div className="class-info flex items-center gap-2 truncate pr-1">
-                                  <span className="w-5 h-5 rounded-full bg-slate-950 flex justify-center items-center font-bold text-xs text-slate-650 shrink-0">🔒</span>
-                                  <span className="font-semibold text-xs text-slate-400 truncate">{clase.titulo}</span>
+                                  <span className="w-6 h-6 rounded-full bg-slate-950 flex justify-center items-center font-bold text-xs text-slate-650 shrink-0">🔒</span>
+                                  <span className="font-semibold text-xs sm:text-sm text-slate-450 truncate">{clase.titulo}</span>
                                 </div>
-                                <span className="py-0.5 px-1.5 bg-slate-950 text-slate-600 border border-white/5 rounded-full text-[7px] font-bold uppercase shrink-0">Bloqueado</span>
+                                <span className="py-0.5 px-2 bg-slate-950 text-slate-500 border border-white/5 rounded-full text-[9px] sm:text-[10px] font-bold uppercase shrink-0">Bloqueado</span>
                               </div>
                             );
                           }
@@ -460,8 +848,8 @@ export default function CourseDetail({
                 );
               })}
             </div>
-          )}
-        </div>
+          </div>
+        )}
         
       </div>
     </div>

@@ -7,7 +7,7 @@ import React, { useEffect, useState } from 'react';
  * @param {Object} props
  * @param {Function} props.onLogout - Acción para cerrar sesión y regresar al inicio.
  */
-export default function LockedScreen({ onLogout }) {
+export default function LockedScreen({ onLogout, onUnlock }) {
   const [loading, setLoading] = useState(true);
   const [lockData, setLockData] = useState({
     user: { nombre_completo: 'Estudiante' },
@@ -15,7 +15,6 @@ export default function LockedScreen({ onLogout }) {
     is_grave_block: false,
     history: []
   });
-
   // Efecto para consultar los detalles del bloqueo en tiempo real (polling cada 5 segundos)
   useEffect(() => {
     const fetchLockDetails = async () => {
@@ -23,17 +22,22 @@ export default function LockedScreen({ onLogout }) {
       try {
         const res = await window.sapiusAPI.apiGet('/user/locked-details');
         if (res && res.success) {
-          const data = res.data;
+          const data = res.data || res;
 
-          // Si el servidor indica que el usuario ya no está bloqueado, cerramos la sesión automáticamente
-          // para obligarlo a ingresar de nuevo y restablecer el estado limpio de la app.
-          if (data.user && !data.user.is_blocked) {
-            window.sapiusAPI.logToServer('Cuenta desbloqueada detectada. Redirigiendo al inicio de sesión.');
-            onLogout();
+          // Si el servidor indica que el usuario ya no está bloqueado, lo restauramos automáticamente
+          if (data && data.user && !data.user.is_blocked) {
+            window.sapiusAPI.logToServer('Cuenta desbloqueada detectada. Restaurando vista principal.');
+            if (onUnlock) {
+              onUnlock();
+            } else {
+              onLogout();
+            }
             return;
           }
 
-          setLockData(data);
+          if (data && data.user) {
+            setLockData(data);
+          }
         }
       } catch (err) {
         console.error('Error cargando detalles de bloqueo:', err);
@@ -49,11 +53,11 @@ export default function LockedScreen({ onLogout }) {
     
     // Limpieza al desmontar el componente
     return () => clearInterval(interval);
-  }, [onLogout]);
+  }, [onLogout, onUnlock]);
 
   // Determinamos los colores y textos del semáforo de gravedad
-  const severity = lockData.avg_severity || 0;
-  const isGrave = lockData.is_grave_block;
+  const severity = lockData?.avg_severity || 0;
+  const isGrave = lockData?.is_grave_block || false;
 
   let severityColor = 'bg-emerald-500';
   let severityText = 'Baja Intencionalidad (Errores Comunes)';
@@ -106,7 +110,7 @@ export default function LockedScreen({ onLogout }) {
           ACCESO BLOQUEADO
         </h1>
         <h3 className="text-sm sm:text-base text-slate-300 font-medium mb-8 leading-relaxed">
-          Lo sentimos, {lockData.user.nombre_completo}. Se ha suspendido temporalmente el acceso de tu cuenta.
+          Lo sentimos, {lockData?.user?.nombre_completo || 'Estudiante'}. Se ha suspendido temporalmente el acceso de tu cuenta.
         </h3>
 
         {/* Tarjeta de Instrucción */}
@@ -122,9 +126,9 @@ export default function LockedScreen({ onLogout }) {
         {/* Semáforo de Gravedad */}
         <div className="bg-white/[0.015] border border-white/5 rounded-2xl p-5 text-left mb-8">
           <h4 className="font-bold text-xs sm:text-sm flex justify-between items-center text-slate-300">
-            <span>Nivel de Gravedad de Infracciones</span>
+            <span>Nivel de Intencionalidad de Copia</span>
             <span className={`text-[10px] uppercase font-bold py-1 px-3 border rounded-full ${badgeBorderColor}`}>
-              {loading ? 'Analizando...' : severityText}
+              {loading ? 'Analizando...' : `${severityText} (${severity}%)`}
             </span>
           </h4>
           <div className="w-full bg-white/5 h-3 rounded-full overflow-hidden mt-4">
@@ -153,7 +157,7 @@ export default function LockedScreen({ onLogout }) {
                       Cargando historial de incidentes...
                     </td>
                   </tr>
-                ) : lockData.history.length === 0 ? (
+                ) : (!lockData?.history || lockData.history.length === 0) ? (
                   <tr>
                     <td colSpan="3" className="py-6 text-center text-xs text-slate-500">
                       No hay registros de strikes disponibles para este bloqueo.

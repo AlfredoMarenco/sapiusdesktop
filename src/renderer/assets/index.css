@@ -1,18 +1,69 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg-main: #f8fafc;
+  --bg-sidebar: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-input: #ffffff;
+  --border-main: rgba(15, 23, 42, 0.08);
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --text-white: #0f172a;
+}
+
+.dark {
+  --bg-main: #020617;
+  --bg-sidebar: #090d16;
+  --bg-card: #0f172a;
+  --bg-input: #020617;
+  --border-main: rgba(255, 255, 255, 0.05);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --text-white: #f8fafc;
+}
+
 @theme {
-  --color-primary-navy: #020617;
-  --color-navy-dark: #090d16;
-  --color-bg-slate-950: #020617;
-  --color-bg-slate-900: #0f172a;
-  --color-bg-slate-800: #1e293b;
+  --color-primary-navy: var(--bg-main);
+  --color-navy-dark: var(--bg-sidebar);
+  
+  --color-bg-slate-950: var(--bg-main);
+  --color-bg-slate-900: var(--bg-card);
+  --color-bg-slate-800: var(--bg-card);
   --color-bg-slate-700: #334155;
+  
+  --color-slate-950: var(--bg-main);
+  --color-slate-900: var(--bg-card);
+  --color-slate-800: var(--bg-card);
+  --color-slate-100: var(--text-main);
+  --color-slate-200: var(--text-main);
+  --color-slate-300: var(--text-muted);
+  --color-slate-350: var(--text-muted);
+  --color-slate-355: var(--text-main);
+  --color-slate-400: var(--text-muted);
+  --color-slate-450: var(--text-muted);
+  --color-slate-455: var(--text-muted);
+  --color-slate-456: var(--text-muted);
+  --color-slate-457: var(--text-muted);
+  --color-slate-500: var(--text-muted);
+  --color-slate-550: var(--text-muted);
+  --color-slate-600: var(--text-muted);
+  --color-slate-700: var(--text-muted);
+  --color-slate-650: var(--text-muted);
+  
+  --color-white: var(--text-white);
+  --color-text-white: var(--text-white);
+  --color-text-muted: var(--text-muted);
+  
   --color-secondary-blue: #3b82f6;
   --color-accent-coral: #f97316;
-  --color-text-white: #f8fafc;
-  --color-text-muted: #94a3b8;
   --color-success-green: #10b981;
   --color-danger-red: #f43f5e;
+  
+  /* Colores de marca Sapius (Laravel) */
+  --color-sapius-azul: #002146;
+  --color-sapius-naranja: #ed6a5a;
 }
 
 body {
@@ -37,5 +88,99 @@ body {
 .exam-content * {
   max-width: 100%;
   box-sizing: border-box;
+  color: var(--text-main);
 }
+
+.lesson-text-content * {
+  color: var(--text-main);
+}
+
+.lesson-text-content p {
+  margin-bottom: 0.85rem;
+  line-height: 1.75;
+}
+
+.lesson-text-content ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.lesson-text-content ol {
+  list-style-type: decimal;
+  margin-left: 1.5rem;
+  margin-bottom: 0.85rem;
+}
+
+.lesson-text-content li {
+  margin-bottom: 0.4rem;
+  line-height: 1.7;
+}
+
+.lesson-text-content h1, .lesson-text-content h2, .lesson-text-content h3 {
+  font-weight: 700;
+  color: var(--text-white);
+  margin-top: 1.25rem;
+  margin-bottom: 0.6rem;
+}
+
+.lesson-text-content h1 { font-size: 1.35rem; }
+.lesson-text-content h2 { font-size: 1.2rem; }
+.lesson-text-content h3 { font-size: 1.05rem; }
+
+/* 3D PDF Page Flip Book Animation Styles */
+.pdf-book-container {
+  perspective: 1800px;
+  perspective-origin: center center;
+}
+
+.pdf-page-wrapper {
+  transition: transform 0.45s cubic-bezier(0.645, 0.045, 0.355, 1);
+  transform-style: preserve-3d;
+}
+
+.pdf-page-flip-next {
+  animation: flip-next-animation 0.4s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+  transform-origin: left center;
+}
+
+.pdf-page-flip-prev {
+  animation: flip-prev-animation 0.4s cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+  transform-origin: right center;
+}
+
+@keyframes flip-next-animation {
+  0% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    transform: rotateY(-45deg) scale(0.97);
+    opacity: 0.8;
+  }
+  100% {
+    transform: rotateY(-90deg) scale(0.95);
+    opacity: 0;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+}
+
+@keyframes flip-prev-animation {
+  0% {
+    transform: rotateY(0deg) scale(1);
+    opacity: 1;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+  }
+  50% {
+    transform: rotateY(45deg) scale(0.97);
+    opacity: 0.8;
+  }
+  100% {
+    transform: rotateY(90deg) scale(0.95);
+    opacity: 0;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+}
+
 

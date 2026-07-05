@@ -301,18 +301,18 @@ export default function ExamOverlay({ pruebaId, inscripcionId, serverUrl, onClos
               {prueba?.descripcion || 'Esta prueba evalúa los contenidos asimilados en la clase.'}
             </p>
             <div className="bg-rose-500/5 border border-rose-500/10 rounded-2xl p-4 text-left mt-2">
-              <strong className="block text-rose-400 text-xs mb-1">🔒 Sistema Anti-Plagio Activo</strong>
-              <p className="text-[10px] text-slate-400 leading-relaxed">
+              <strong className="block text-rose-400 text-[11px] sm:text-xs mb-1">🔒 Sistema Anti-Plagio Activo</strong>
+              <p className="text-[9px] sm:text-[10px] text-slate-400 leading-relaxed">
                 El examen corre bajo monitoreo. Cambiar de ventana, abrir herramientas de desarrollador o inactividad prolongada registrarán strikes directos a tu historial.
               </p>
             </div>
-            <div className="text-xs text-slate-500 font-semibold mt-2">
+            <div className="text-[11px] sm:text-xs text-slate-500 font-semibold mt-2">
               Oportunidades restantes: <span className="text-blue-450">{oportunidades_restantes}</span> • Duración: <span className="text-blue-450">{prueba?.duracion || 60} minutos</span>
             </div>
           </div>
           <button 
             onClick={handleStartExam}
-            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md cursor-pointer"
+            className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-[11px] sm:text-xs font-bold transition-all shadow-md cursor-pointer"
           >
             Comenzar Examen
           </button>
