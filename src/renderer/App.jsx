@@ -7,10 +7,12 @@ import LockedScreen from './components/LockedScreen';
 import CourseDetail from './components/CourseDetail';
 import ExamOverlay from './components/ExamOverlay';
 import ProfileView from './components/ProfileView';
+import InteractiveTutorial from './components/InteractiveTutorial';
 
 export default function App() {
   // Navigation & Core States
   const [currentView, setCurrentView] = useState('splash'); // splash, server-selection, login, dashboard, loading
+  const [showTutorial, setShowTutorial] = useState(false);
   const [currentServer, setCurrentServer] = useState(localStorage.getItem('sapius_server_url') || '');
   const [envUrls, setEnvUrls] = useState({ dev: '', prod: '', local: '' });
   const [statusMsg, setStatusMsg] = useState({ text: '', type: 'error' });
@@ -37,6 +39,16 @@ export default function App() {
     }
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  // Auto-start tutorial on first dashboard load
+  useEffect(() => {
+    if (currentView === 'dashboard' && user?.nombre_completo && !localStorage.getItem('student_tutorial_seen')) {
+      const timer = setTimeout(() => {
+        setShowTutorial(true);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentView, user]);
 
   // Dashboard Navigation
   const [activeTab, setActiveTab] = useState('courses'); // courses, homework, calendar, support, profile
@@ -510,7 +522,7 @@ export default function App() {
   };
 
   // Exam overlay logic
-  const handleLaunchExam = (pruebaId) => {
+  const handleLaunchExam = (pruebaId, feedbackExamenId = null) => {
     let inscId = activeInscripcionId;
     if (!inscId && selectedCourse && selectedCourse.inscrito) {
       inscId = selectedCourse.inscrito.id;
@@ -518,12 +530,12 @@ export default function App() {
     if (!inscId && activeLesson && activeLesson.inscripcion_id) {
       inscId = activeLesson.inscripcion_id;
     }
-    console.log(`[Exam] Launching exam ${pruebaId} for inscription ${inscId}`);
+    console.log(`[Exam] Launching exam ${pruebaId} for inscription ${inscId} (feedback: ${feedbackExamenId})`);
     if (!inscId) {
       alert('No se pudo determinar el ID de inscripción de tu curso. Intenta reingresar al curso.');
       return;
     }
-    setActiveExamParams({ pruebaId, inscripcionId: inscId });
+    setActiveExamParams({ pruebaId, inscripcionId: inscId, feedbackExamenId });
   };
 
   // Tabs loading
@@ -729,10 +741,17 @@ export default function App() {
         <ExamOverlay
           pruebaId={activeExamParams.pruebaId}
           inscripcionId={activeExamParams.inscripcionId}
+          feedbackExamenId={activeExamParams.feedbackExamenId}
           serverUrl={currentServer}
           onClose={() => setActiveExamParams(null)}
           onExamFinished={async () => {
             if (selectedCourse) {
+              if (activeLesson) {
+                const lessonRes = await window.sapiusAPI.apiGet(`/electron/lesson/details/${activeLesson.leccion.id}/${selectedCourse.curso_programado.id}`);
+                if (lessonRes && lessonRes.success) {
+                  setActiveLesson(lessonRes.data);
+                }
+              }
               const courseRes = await window.sapiusAPI.apiGet(`/electron/course/${selectedCourse.curso_programado.id}`);
               if (courseRes && courseRes.success) {
                 setSelectedCourse(courseRes.data);
@@ -774,6 +793,7 @@ export default function App() {
  
           <nav className="flex flex-col gap-2 grow">
             <button 
+              id="btn-nav-courses"
               onClick={() => { setActiveTab('courses'); }}
               className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'courses' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
             >
@@ -788,6 +808,7 @@ export default function App() {
             </button>
 
             <button 
+              id="btn-nav-homework"
               onClick={() => { setActiveTab('homework'); }}
               className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'homework' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
             >
@@ -801,6 +822,7 @@ export default function App() {
             </button>
 
             <button 
+              id="btn-nav-calendar"
               onClick={() => { setActiveTab('calendar'); }}
               className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'calendar' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
             >
@@ -816,6 +838,7 @@ export default function App() {
             </button>
 
             <button 
+              id="btn-nav-support"
               onClick={() => { setActiveTab('support'); }}
               className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'support' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
             >
@@ -828,6 +851,7 @@ export default function App() {
             </button>
 
             <button 
+              id="btn-nav-profile"
               onClick={() => { setActiveTab('profile'); }}
               className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'profile' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
             >
@@ -850,6 +874,7 @@ export default function App() {
             </div>
             
             <button 
+              id="btn-nav-theme"
               type="button"
               onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
               className={`bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] rounded-xl text-xs font-semibold flex items-center justify-center cursor-pointer transition-all duration-300 ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-2.5 group-hover:px-4 group-hover:gap-3.5' : 'w-full py-2.5 px-4 gap-3.5'}`}
@@ -898,6 +923,16 @@ export default function App() {
               {activeTab === 'profile' && 'Mi Cuenta'}
             </h1>
             <div className="flex items-center gap-4">
+              {/* Tutorial Button */}
+              <button
+                id="btn-trigger-tutorial"
+                onClick={() => setShowTutorial(true)}
+                className="flex items-center gap-2 py-2 px-3 text-text-muted hover:text-text-white bg-bg-slate-900 border border-border-main rounded-xl transition-all cursor-pointer text-xs font-bold shadow-sm"
+                title="Ver Tutorial de Inicio"
+              >
+                ❓ <span className="hidden sm:inline">Ver Tutorial</span>
+              </button>
+
               {/* Notification Popover Dropdown Button */}
               <div className="relative">
                 <button 
@@ -1035,6 +1070,55 @@ export default function App() {
           </div>
         </main>
         {renderStrikeWarning()}
+        {showTutorial && (
+          <InteractiveTutorial 
+            customSteps={
+              selectedCourse 
+                ? [
+                    {
+                      selector: '#btn-trigger-tutorial',
+                      title: '📖 Aula Virtual de Sapius',
+                      description: 'Estás en la vista del curso. Sigue esta guía para conocer cómo navegar por las lecciones y actividades.',
+                      placement: 'bottom'
+                    },
+                    {
+                      selector: '.lesson-main',
+                      title: '📺 Contenidos de Aprendizaje',
+                      description: 'En esta sección principal verás el reproductor de video de la clase o el visor interactivo de PDF de estudio.',
+                      placement: 'bottom'
+                    },
+                    {
+                      selector: '.course-detail-header',
+                      title: '📊 Progreso del Curso',
+                      description: 'Monitorea tu avance general dentro de este plan de estudios en tiempo real.',
+                      placement: 'bottom'
+                    },
+                    {
+                      selector: '.modules-accordion',
+                      title: '🗺️ Navegación de Clases',
+                      description: 'Este menú te permite explorar los módulos completos del curso, ver tu avance y abrir otras clases del temario.',
+                      placement: 'top'
+                    },
+                    {
+                      selector: '#tutorial-exams-card',
+                      title: '✍️ Evaluaciones de Clase',
+                      description: 'Aquí encontrarás los exámenes de esta lección. Asegúrate de leer los límites de tiempo e intentos antes de iniciar.',
+                      placement: 'top'
+                    },
+                    {
+                      selector: '#tutorial-homework-card',
+                      title: '📥 Entrega de Tareas',
+                      description: 'Sube tus archivos resueltos (.pdf, .zip, .docx) en este apartado para que el docente califique tu desempeño.',
+                      placement: 'top'
+                    }
+                  ]
+                : null
+            }
+            activeTab={activeTab} 
+            onSelectTab={setActiveTab} 
+            onClose={() => setShowTutorial(false)} 
+          />
+        )}
       </div>
     );
   }

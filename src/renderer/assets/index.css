@@ -55,6 +55,7 @@
   --color-white: var(--text-white);
   --color-text-white: var(--text-white);
   --color-text-muted: var(--text-muted);
+  --color-border-main: var(--border-main);
   
   --color-secondary-blue: #3b82f6;
   --color-accent-coral: #f97316;
@@ -85,14 +86,14 @@ body {
   line-height: 1.6;
 }
 
-.exam-content * {
+.exam-content, .exam-content * {
   max-width: 100%;
   box-sizing: border-box;
-  color: var(--text-main);
+  color: var(--text-main) !important;
 }
 
-.lesson-text-content * {
-  color: var(--text-main);
+.lesson-text-content, .lesson-text-content * {
+  color: var(--text-main) !important;
 }
 
 .lesson-text-content p {

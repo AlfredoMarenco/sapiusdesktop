@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
+import InteractiveTutorial from './InteractiveTutorial';
 
 /**
  * Componente que muestra el espacio de trabajo del curso, incluyendo el temario en la parte inferior,
@@ -68,6 +69,7 @@ export default function CourseDetail({
 
   const [pdfOutline, setPdfOutline] = React.useState([]);
   const [showOutline, setShowOutline] = React.useState(false);
+  const [showLessonTutorial, setShowLessonTutorial] = useState(false);
 
   React.useEffect(() => {
     if (selectedCourse && selectedCourse.globalProgress >= 90) {
@@ -686,29 +688,52 @@ export default function CourseDetail({
 
                     {/* Exámenes de la Clase */}
                     {activeLesson.leccion && activeLesson.leccion.pruebas && activeLesson.leccion.pruebas.length > 0 && (
-                      <div className="bg-white/[0.015] border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
+                      <div id="tutorial-exams-card" className="bg-white/[0.015] border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
                         <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Exámenes de la Clase</h3>
                         <div className="flex flex-col gap-2">
-                          {activeLesson.leccion.pruebas.map((pr) => (
-                            <div key={pr.id} className="flex justify-between items-center py-2 px-3 bg-slate-900 border border-white/5 rounded-xl">
-                              <div className="truncate pr-2">
-                                <strong className="block text-xs text-white truncate max-w-[120px]">{pr.titulo}</strong>
-                                <span className="text-[10px] text-slate-450">{pr.oportunidades} Oportunidades</span>
+                          {activeLesson.leccion.pruebas.map((pr) => {
+                            const finishedAttempts = pr.examenes?.filter(ex => ex.finalizado === 'si') || [];
+                            const pendingFeedbackExam = finishedAttempts.find(ex => ex.retro_visualizado === 'no');
+                            const remainingOportunidades = pr.oportunidades - finishedAttempts.length;
+
+                            let buttonText = 'Presentar';
+                            let buttonColorClass = 'bg-blue-600 hover:bg-blue-500 text-white';
+                            let isDisabled = false;
+                            let onClickAction = () => onLaunchExam(pr.id);
+
+                            if (pendingFeedbackExam) {
+                              buttonText = 'Ver retroalimentación';
+                              buttonColorClass = 'bg-emerald-600 hover:bg-emerald-500 text-white';
+                              onClickAction = () => onLaunchExam(pr.id, pendingFeedbackExam.id);
+                            } else if (remainingOportunidades <= 0) {
+                              buttonText = 'Sin intentos';
+                              buttonColorClass = 'bg-slate-800 text-slate-500 border border-white/5 cursor-not-allowed';
+                              isDisabled = true;
+                              onClickAction = () => {};
+                            }
+
+                            return (
+                              <div key={pr.id} className="flex justify-between items-center py-2 px-3 bg-slate-900 border border-white/5 rounded-xl">
+                                <div className="truncate pr-2">
+                                  <strong className="block text-xs text-white truncate max-w-[120px]">{pr.titulo}</strong>
+                                  <span className="text-[10px] text-slate-450">{pr.oportunidades} Oportunidades</span>
+                                </div>
+                                <button 
+                                  onClick={onClickAction}
+                                  disabled={isDisabled}
+                                  className={`py-1 px-3 rounded-lg text-[10px] font-bold cursor-pointer transition-all duration-200 ${buttonColorClass}`}
+                                >
+                                  {buttonText}
+                                </button>
                               </div>
-                              <button 
-                                onClick={() => onLaunchExam(pr.id)}
-                                className="py-1 px-3 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold cursor-pointer"
-                              >
-                                Presentar
-                              </button>
-                            </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
 
                     {/* Entrega de Tarea */}
-                    <div className="bg-white/[0.015] border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
+                    <div id="tutorial-homework-card" className="bg-white/[0.015] border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
                       <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Entregar Tarea</h3>
                       
                       {homeworkStatus ? (
@@ -850,7 +875,6 @@ export default function CourseDetail({
             </div>
           </div>
         )}
-        
       </div>
     </div>
   );
