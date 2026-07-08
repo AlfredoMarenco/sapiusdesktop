@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-export default function ProfileView({ serverUrl }) {
+export default function ProfileView({ serverUrl, onProfileUpdated }) {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -18,6 +18,16 @@ export default function ProfileView({ serverUrl }) {
   const [foto, setFoto] = useState(null);
   const [documentoId, setDocumentoId] = useState(null);
   const [pase, setPase] = useState(null);
+
+  const getFullUrl = (path) => {
+    if (!path) return '';
+    if (path.startsWith('http://') || path.startsWith('https://')) return path;
+    return `${serverUrl}${path}`;
+  };
+
+  // Previews
+  const [previewUrl, setPreviewUrl] = useState(null);
+  const [previewType, setPreviewType] = useState('');
 
   useEffect(() => {
     fetchProfile();
@@ -82,6 +92,9 @@ export default function ProfileView({ serverUrl }) {
         setDocumentoId(null);
         setPase(null);
         fetchProfile();
+        if (onProfileUpdated) {
+          onProfileUpdated();
+        }
       } else {
         setMessage({ text: res.message || 'Error al actualizar el perfil.', type: 'error' });
       }
@@ -215,6 +228,22 @@ export default function ProfileView({ serverUrl }) {
               Expediente Digital
             </h3>
 
+            {/* Profile Pic Display */}
+            {profileData?.foto_url && (
+              <div className="flex justify-center mb-6">
+                <div className="relative group cursor-pointer" onClick={() => { setPreviewUrl(getFullUrl(profileData.foto_url)); setPreviewType('image'); }}>
+                  <img 
+                    src={getFullUrl(profileData.foto_url)} 
+                    className="w-24 h-24 rounded-full object-cover border-2 border-sapius-azul/30 shadow-lg hover:border-sapius-azul/60 transition-all" 
+                    alt="Foto de perfil" 
+                  />
+                  <div className="absolute inset-0 bg-black/45 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                    <span className="text-[10px] font-bold text-white uppercase tracking-wider">Ampliar</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="space-y-5">
               
               {/* Profile Pic Upload */}
@@ -239,11 +268,26 @@ export default function ProfileView({ serverUrl }) {
               <div className="border border-white/5 rounded-2xl p-4 bg-slate-950/20">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-[11px] sm:text-xs font-bold text-slate-350">Identificación Oficial</span>
-                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                    profileData?.documento_identificacion ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-455 border border-rose-500/20'
-                  }`}>
-                    {profileData?.documento_identificacion ? 'Cargado' : 'Pendiente'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {profileData?.documento_url && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const isPdf = profileData.documento_identificacion.toLowerCase().endsWith('.pdf');
+                          setPreviewUrl(getFullUrl(profileData.documento_url));
+                          setPreviewType(isPdf ? 'pdf' : 'image');
+                        }}
+                        className="text-[9px] px-2 py-0.5 rounded-full bg-sapius-azul/10 hover:bg-sapius-azul/20 text-sapius-azul border border-sapius-azul/20 font-bold uppercase cursor-pointer transition-colors"
+                      >
+                        Ver Preview
+                      </button>
+                    )}
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      profileData?.documento_identificacion ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-455 border border-rose-500/20'
+                    }`}>
+                      {profileData?.documento_identificacion ? 'Cargado' : 'Pendiente'}
+                    </span>
+                  </div>
                 </div>
                 <input 
                   type="file" 
@@ -257,11 +301,26 @@ export default function ProfileView({ serverUrl }) {
               <div className="border border-white/5 rounded-2xl p-4 bg-slate-950/20">
                 <div className="flex justify-between items-center mb-2">
                   <span className="text-[11px] sm:text-xs font-bold text-slate-350">Pase de Ingreso</span>
-                  <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                    profileData?.pase_ingreso ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-455 border border-rose-500/20'
-                  }`}>
-                    {profileData?.pase_ingreso ? 'Cargado' : 'Pendiente'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {profileData?.pase_url && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const isPdf = profileData.pase_ingreso.toLowerCase().endsWith('.pdf');
+                          setPreviewUrl(getFullUrl(profileData.pase_url));
+                          setPreviewType(isPdf ? 'pdf' : 'image');
+                        }}
+                        className="text-[9px] px-2 py-0.5 rounded-full bg-sapius-azul/10 hover:bg-sapius-azul/20 text-sapius-azul border border-sapius-azul/20 font-bold uppercase cursor-pointer transition-colors"
+                      >
+                        Ver Preview
+                      </button>
+                    )}
+                    <span className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      profileData?.pase_ingreso ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-455 border border-rose-500/20'
+                    }`}>
+                      {profileData?.pase_ingreso ? 'Cargado' : 'Pendiente'}
+                    </span>
+                  </div>
                 </div>
                 <input 
                   type="file" 
@@ -276,6 +335,31 @@ export default function ProfileView({ serverUrl }) {
         </div>
 
       </form>
+
+      {/* PREVIEW MODAL */}
+      {previewUrl && (
+        <div className="fixed inset-0 w-screen h-screen bg-slate-950/80 backdrop-blur-md z-[10000] flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-white/10 p-6 rounded-3xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl relative">
+            <button 
+              type="button"
+              onClick={() => { setPreviewUrl(null); setPreviewType(''); }}
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white font-bold cursor-pointer transition-all"
+            >
+              ✕
+            </button>
+            <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 border-b border-white/5 pb-2">
+              Vista Previa del Documento
+            </h3>
+            <div className="grow overflow-auto flex items-center justify-center bg-slate-950/40 rounded-2xl p-2 min-h-[400px]">
+              {previewType === 'pdf' ? (
+                <iframe src={previewUrl} className="w-full h-[60vh] border-0 rounded-xl" />
+              ) : (
+                <img src={previewUrl} className="max-w-full max-h-[60vh] object-contain rounded-xl" alt="Preview" />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

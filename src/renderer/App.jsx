@@ -8,8 +8,45 @@ import CourseDetail from './components/CourseDetail';
 import ExamOverlay from './components/ExamOverlay';
 import ProfileView from './components/ProfileView';
 import InteractiveTutorial from './components/InteractiveTutorial';
+import iconoSapius from './assets/img/icono-sapius.svg';
+
+function LogoSapius({ className }) {
+  return (
+    <svg 
+      className={className} 
+      viewBox="0 0 1080 366.5" 
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <g id="Capa_1">
+        <circle cx="1000.5" cy="216" r="18.5" fill="#ED6A5A"/>
+      </g>
+      <g id="Capa_8">
+        <path d="M837.1,222.9v-40.7c19.6,11.4,39.1,17.1,58.7,17.1c13.7,0,20.5-3.9,20.5-11.6c0-2.2-0.6-4.1-1.7-5.5c-1.1-1.4-3.1-2.6-5.8-3.5c-2.8-0.9-5.5-1.7-8.1-2.3c-2.7-0.6-6.4-1.3-11.2-2.1c-4.8-0.8-9-1.7-12.7-2.8c-15.1-3.7-26.4-8.9-33.9-15.7c-7.5-6.8-11.3-16.2-11.3-28c0.2-15.5,6.4-27.7,18.7-36.5c12.2-8.9,27.9-13.3,47.1-13.3c21.8,0,41,4,57.5,11.9v40.1c-19-10.8-37.8-16.2-56.6-16.2c-13,0-19.6,3.6-19.6,10.7c0,2,0.6,3.8,1.7,5.2c1.1,1.4,3,2.6,5.7,3.5c2.6,0.9,5.2,1.6,7.8,2.1c2.5,0.5,6.2,1.2,11,2.1c4.8,0.9,8.9,1.8,12.4,2.6c15.5,3.9,27.1,9.1,34.7,15.7c7.6,6.6,11.5,16.1,11.5,28.3c-0.2,16.1-6.6,28.6-19.1,37.6c-12.5,9-28.7,13.5-48.5,13.5C873.5,235.1,854,231,837.1,222.9z" fill="currentColor"/>
+      </g>
+      <g id="Capa_3">
+        <path d="M670.1,220.4c-9.6-9.8-14.3-25.2-14.3-46.2l0.1-92.7l46.5,0l-0.1,85.6c0,10.4,1.9,17.6,5.8,21.7c3.9,4.5,9.4,6.7,16.5,6.7c11,0,21.2-4.5,30.6-13.4l0.1-100.6l46.5,0l-0.2,150.4l-45.9,0l0-14.1l-0.6-0.3c-13.7,11.8-29,17.7-45.9,17.7C692.7,235.4,679.6,230.4,670.1,220.4z" fill="currentColor"/>
+      </g>
+      <g id="Capa_4">
+        <rect x="518.8" y="133.4" transform="matrix(1.006075e-03 -1 1 1.006075e-03 436.7053 750.5189)" width="150.4" height="46.5" fill="currentColor"/>
+      </g>
+      <g id="Capa_5">
+        <path d="M432.5,229.6l-0.1,69.4l-46.5,0l0.2-217.7l45.6,0l0,7.6l0.6,0.3c11-7.5,23.5-11.3,37.3-11.3c19.8,0,36.6,7.2,50.4,21.6c13.8,14.4,20.8,33,20.7,55.8c0,23.7-7.5,42.9-22.5,57.6c-15,14.8-33.7,22.1-56.1,22.1c-11.2,0-20.9-2-29-5.8L432.5,229.6z M432.5,191.7c7.3,3.9,15.3,5.8,23.8,5.8c11.8,0,21.1-3.7,27.7-11.1c6.6-7.4,10-17,10-28.6c0-11.6-3.2-21.4-9.8-29.2c-6.5-7.9-15.4-11.8-26.6-11.8c-9.2,0-17.5,2.7-25.1,8.2L432.5,191.7z" fill="currentColor"/>
+      </g>
+      <g id="Capa_6">
+        <path d="M264.6,234.9c-13.7,0-25.3-3.3-34.9-9.8c-11.8-8.2-17.7-19.9-17.7-35.2c0-15.9,6.1-28,18.4-36.4c10.4-7.1,24.5-10.7,42.2-10.7c9.2,0,17.8,0.9,26,2.8l0-5.8c0-7.1-1.9-12.4-5.8-15.9c-4.7-4.3-12.4-6.4-23.2-6.4c-14.7,0-29.4,3.9-44,11.9l0-40.1c15.5-7.7,33-11.6,52.6-11.6c21.8,0,38.5,4.8,50.1,14.4c11.2,9.2,16.8,23.1,16.8,41.6l-0.1,51.1c0,8,3,11.9,9.2,11.9c2.6,0,5.2-0.6,7.6-1.8l0,34.9c-5.7,3.1-13.2,4.6-22.3,4.6c-13.9,0-24.7-4-32.4-12l-0.6,0C294.9,230.8,280.9,235,264.6,234.9z M277.5,200.7c7.3,0,14.4-2,21.1-6.1l0-22c-4.5-1.4-10-2.2-16.5-2.2c-15.9,0-23.9,5.1-23.9,15.3c0,4.7,1.8,8.4,5.5,11C267.4,199.4,272,200.7,277.5,200.7z" fill="currentColor"/>
+      </g>
+      <g id="Capa_7">
+        <path d="M67.1,222.5l0-40.7c19.6,11.4,39.1,17.2,58.7,17.2c13.7,0,20.5-3.8,20.5-11.6c0-2.2-0.6-4.1-1.7-5.5c-1.1-1.4-3.1-2.6-5.8-3.5c-2.8-0.9-5.5-1.7-8.1-2.3c-2.7-0.6-6.4-1.3-11.2-2.2c-4.8-0.8-9-1.7-12.7-2.8c-15.1-3.7-26.4-8.9-33.9-15.8c-7.5-6.8-11.3-16.2-11.3-28c0.2-15.5,6.4-27.7,18.7-36.5s27.9-13.3,47.1-13.3c21.8,0,41,4,57.5,12l0,40.1c-18.9-10.8-37.8-16.2-56.6-16.3c-13,0-19.6,3.5-19.6,10.7c0,2,0.6,3.8,1.7,5.2c1.1,1.4,3,2.6,5.7,3.5c2.6,0.9,5.2,1.6,7.8,2.1c2.5,0.5,6.2,1.2,11,2.2c4.8,0.9,8.9,1.8,12.4,2.6c15.5,3.9,27.1,9.2,34.7,15.8c7.6,6.6,11.5,16.1,11.4,28.3c-0.2,16.1-6.6,28.6-19.2,37.6c-12.5,9-28.7,13.4-48.5,13.4C103.5,234.8,84,230.7,67.1,222.5z" fill="currentColor"/>
+      </g>
+    </svg>
+  );
+}
 
 export default function App() {
+  // MAC request states
+  const [pendingMacRequest, setPendingMacRequest] = useState(null);
+  const [requestMacSent, setRequestMacSent] = useState(false);
+
   // Navigation & Core States
   const [currentView, setCurrentView] = useState('splash'); // splash, server-selection, login, dashboard, loading
   const [showTutorial, setShowTutorial] = useState(false);
@@ -22,6 +59,7 @@ export default function App() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [user, setUser] = useState({ nombre_completo: '', avatar: '' });
+  const [avatarError, setAvatarError] = useState(false);
   const [activeInscripcionId, setActiveInscripcionId] = useState(null);
 
   // Theme State
@@ -166,12 +204,21 @@ export default function App() {
     }
   }, []);
 
-  const transitionToSelector = () => {
+  const transitionToSelector = async () => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('view') === 'locked') {
       setCurrentView('locked');
     } else {
-      setCurrentView('server-selection');
+      if (window.sapiusAPI && window.sapiusAPI.getBaseUrl) {
+        try {
+          const url = await window.sapiusAPI.getBaseUrl();
+          setCurrentServer(url);
+          localStorage.setItem('sapius_server_url', url);
+        } catch (e) {
+          console.error('Error fetching base URL from main process:', e);
+        }
+      }
+      setCurrentView('login');
     }
   };
 
@@ -216,6 +263,9 @@ export default function App() {
             window.sapiusAPI.logToServer(`Usuario bloqueado durante validación MAC. Redirigiendo a locked.html`);
             setCurrentView('locked');
             return;
+          }
+          if (macRes.pending_request) {
+            setPendingMacRequest(mac);
           }
           setStatusMsg({ text: macRes.message || 'Error de autorización del dispositivo.', type: 'error' });
           setCurrentView('login');
@@ -295,9 +345,12 @@ export default function App() {
       if (window.sapiusAPI) {
         const res = await window.sapiusAPI.apiGet('/electron/dashboard');
         if (res && res.success) {
+          console.log('[DEBUG] Dashboard User Loaded:', JSON.stringify(res.data.user));
+          setAvatarError(false);
           setUser({
             nombre_completo: res.data.user.nombre_completo,
-            avatar: res.data.user.nombre_completo.charAt(0).toUpperCase()
+            avatar: res.data.user.nombre_completo.charAt(0).toUpperCase(),
+            foto_url: res.data.user.foto_url ? `${currentServer}${res.data.user.foto_url}` : null
           });
           setCourses(res.data.mis_cursos);
           fetchNotifications(); // Cargar notificaciones al iniciar
@@ -594,7 +647,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex justify-center items-center bg-slate-950 text-white font-sans">
         <div className="bg-slate-900/30 border border-white/5 p-12 rounded-3xl w-full max-w-[420px] mx-4 text-center shadow-2xl backdrop-blur-xl">
-          <div className="logo text-4xl font-extrabold mb-8 tracking-tight text-white">SAPIUS<span className="text-orange-500">.</span></div>
+          <LogoSapius className="h-12 mx-auto mb-8 text-white" />
           <div className="spinner my-5 mx-auto w-8 h-8 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
           <p className="text-sm font-medium text-slate-350">{updateStatus}</p>
           {showProgress && (
@@ -611,7 +664,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex justify-center items-center bg-slate-950 text-white font-sans">
         <div className="bg-slate-900/30 border border-white/5 p-8 sm:p-12 rounded-3xl w-full max-w-[420px] mx-4 shadow-2xl backdrop-blur-xl">
-          <div className="logo text-center text-4xl font-extrabold mb-8 tracking-tight text-white">SAPIUS<span className="text-orange-500">.</span></div>
+          <LogoSapius className="h-12 mx-auto mb-8 text-white" />
           <h2 className="text-base sm:text-lg font-bold mb-2 tracking-tight text-center">Selecciona un Entorno</h2>
           <p className="text-[11px] sm:text-xs text-slate-400 mb-8 font-medium text-center">Por favor elige el servidor al que deseas conectarte.</p>
           
@@ -650,7 +703,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex justify-center items-center bg-slate-950 text-white font-sans">
         <form onSubmit={handleLogin} className="bg-slate-900/30 border border-white/5 p-8 sm:p-12 rounded-3xl w-full max-w-[420px] mx-4 shadow-2xl backdrop-blur-xl">
-          <div className="logo text-center text-4xl font-extrabold mb-8 tracking-tight text-white">SAPIUS<span className="text-orange-500">.</span></div>
+          <LogoSapius className="h-12 mx-auto mb-8 text-white" />
           <h2 className="text-base sm:text-lg font-bold mb-2 tracking-tight text-center">Bienvenido de nuevo</h2>
           <p className="text-[11px] sm:text-xs text-slate-400 mb-8 font-medium text-center">Ingresa tus credenciales para acceder a tus cursos</p>
           
@@ -684,17 +737,32 @@ export default function App() {
             Iniciar Sesión
           </button>
 
-          <button 
-            type="button"
-            onClick={() => setCurrentView('server-selection')}
-            className="w-full mt-3 py-2.5 px-6 bg-transparent text-slate-400 hover:text-white rounded-xl text-[11px] sm:text-xs font-semibold cursor-pointer transition-colors duration-250"
-          >
-            ← Cambiar Servidor
-          </button>
 
           {statusMsg.text && (
-            <div className="mt-6 text-[11px] sm:text-xs text-center text-red-400 bg-red-500/5 border border-red-500/10 py-3 px-4 rounded-xl">
-              {statusMsg.text}
+            <div className="mt-6 text-[11px] sm:text-xs text-center text-red-400 bg-red-500/5 border border-red-500/10 py-3 px-4 rounded-xl flex flex-col items-center gap-3">
+              <span>{statusMsg.text}</span>
+              {pendingMacRequest && !requestMacSent && (
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      const res = await window.sapiusAPI.apiPost('/electron/request-mac-auth', { mac_address: pendingMacRequest });
+                      if (res && res.success) {
+                        setRequestMacSent(true);
+                        setStatusMsg({ text: 'Solicitud de autorización enviada con éxito. Por favor espera la aprobación del administrador.', type: 'success' });
+                      } else {
+                        alert(res.message || 'Error al enviar solicitud.');
+                      }
+                    } catch (e) {
+                      console.error(e);
+                      alert('Error al enviar la solicitud.');
+                    }
+                  }}
+                  className="w-full py-2 px-3 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-[10px] font-bold cursor-pointer transition-colors"
+                >
+                  Solicitar Autorización de este Dispositivo
+                </button>
+              )}
             </div>
           )}
           <div className="absolute bottom-4 left-4 text-[10px] text-slate-600 font-bold">v{appVersion}</div>
@@ -726,7 +794,7 @@ export default function App() {
     return (
       <div className="min-h-screen flex justify-center items-center bg-slate-950 text-white font-sans">
         <div className="bg-slate-900/30 border border-white/5 p-12 rounded-3xl w-full max-w-[420px] mx-4 text-center shadow-2xl backdrop-blur-xl animate-pulse">
-          <div className="logo text-4xl font-extrabold mb-8 tracking-tight text-white">SAPIUS<span className="text-orange-500">.</span></div>
+          <LogoSapius className="h-12 mx-auto mb-8 text-white animate-pulse" />
           <div className="spinner my-5 mx-auto w-8 h-8 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
           <p className="text-sm font-medium text-slate-350">Verificando dispositivo e iniciando sesión...</p>
         </div>
@@ -771,19 +839,32 @@ export default function App() {
         {/* SIDEBAR */}
         <aside className={`hidden md:flex flex-col py-6 px-4 md:px-5 shrink-0 transition-all duration-300 ease-in-out border-r border-white/5 bg-slate-900/60 backdrop-blur-xl group ${isSidebarCollapsed ? 'w-[75px]' : 'w-[260px]'} hover:w-[260px]`}>
           <div className="sidebar-header mb-8 flex flex-col gap-4">
-            <div className={`text-xl font-bold tracking-tight uppercase text-white flex items-center ${isSidebarCollapsed ? 'justify-center group-hover:justify-between' : 'justify-between'}`}>
-              <span className={`inline-block transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 max-w-0 overflow-hidden group-hover:opacity-100 group-hover:max-w-[150px]' : 'opacity-100 max-w-[150px]'}`}>
-                SAPIUS<span className="text-sapius-naranja">.</span>
-              </span>
+            <div className={`flex items-center ${isSidebarCollapsed ? 'justify-center group-hover:justify-between' : 'justify-between'}`}>
+              <LogoSapius 
+                className={`h-14 mx-auto transition-all duration-300 ${theme === 'light' ? 'text-[#0a2540]' : 'text-slate-100'} ${isSidebarCollapsed ? 'opacity-0 max-w-0 overflow-hidden group-hover:opacity-100 group-hover:max-w-[150px]' : 'opacity-100 max-w-[150px]'}`}
+              />
               {isSidebarCollapsed && (
-                <span className="text-sapius-naranja font-extrabold text-2xl mx-auto block group-hover:hidden">S.</span>
+                <img 
+                  src={iconoSapius} 
+                  className={`h-8 w-8 object-contain mx-auto block group-hover:hidden ${theme === 'light' ? 'invert brightness-[0.2]' : ''}`} 
+                  alt="Sapius Icon" 
+                />
               )}
             </div>
             
             <div className={`flex items-center bg-white/[0.02] border border-white/[0.04] rounded-2xl transition-all duration-300 ${isSidebarCollapsed ? 'p-1 justify-center mx-auto w-10 h-10 md:w-11 md:h-11 group-hover:w-full group-hover:h-auto group-hover:p-3 group-hover:justify-start group-hover:gap-3 shadow-inner' : 'p-3 gap-3 w-full shadow-inner'}`}>
-              <div className="w-8 h-8 text-xs font-extrabold flex justify-center items-center rounded-full shrink-0 shadow-lg shadow-sapius-azul/20 text-[#ffffff] bg-sapius-azul dark:bg-sapius-naranja">
-                {user.avatar || 'S'}
-              </div>
+              {user.foto_url && !avatarError ? (
+                <img 
+                  src={user.foto_url} 
+                  onError={() => setAvatarError(true)}
+                  className="w-8 h-8 rounded-full object-cover shrink-0 shadow-lg shadow-sapius-azul/20" 
+                  alt="Avatar" 
+                />
+              ) : (
+                <div className="w-8 h-8 text-xs font-extrabold flex justify-center items-center rounded-full shrink-0 shadow-lg shadow-sapius-azul/20 text-[#ffffff] bg-sapius-azul dark:bg-sapius-naranja">
+                  {user.avatar || 'S'}
+                </div>
+              )}
               <div className={`truncate transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 max-w-0 overflow-hidden group-hover:opacity-100 group-hover:max-w-[150px]' : 'opacity-100 max-w-[150px]'}`}>
                 <h4 className="text-[11px] sm:text-xs font-bold text-slate-100 truncate w-[125px]">{user.nombre_completo || 'Estudiante'}</h4>
                 <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Alumno</span>
@@ -1064,7 +1145,7 @@ export default function App() {
 
             {/* TABS 5: Profile View */}
             {activeTab === 'profile' && (
-              <ProfileView serverUrl={currentServer} />
+              <ProfileView serverUrl={currentServer} onProfileUpdated={loadDashboardData} />
             )}
 
           </div>

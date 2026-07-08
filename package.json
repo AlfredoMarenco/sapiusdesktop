@@ -1,26 +1,27 @@
 {
   "name": "sapiusdesktop",
-  "version": "1.0.6",
+  "version": "2.0.1",
   "description": "Aula virtual de Sapius para escritorio",
   "license": "ISC",
   "author": "marencocode",
   "type": "commonjs",
   "main": "src/main/index.js",
   "scripts": {
-    "start": "concurrently -k \"vite\" \"electron .\"",
-    "dev": "concurrently -k \"vite\" \"electron .\"",
-    "build": "vite build && electron-builder build --win -p always",
+    "start": "node -e \"const fs=require('fs'); fs.writeFileSync('config.json', JSON.stringify({env: 'dev'}))\" && concurrently -k \"vite\" \"electron .\"",
+    "dev": "node -e \"const fs=require('fs'); fs.writeFileSync('config.json', JSON.stringify({env: 'dev'}))\" && concurrently -k \"vite\" \"electron .\"",
+    "build:prod": "node -e \"const fs=require('fs'); fs.writeFileSync('config.json', JSON.stringify({env: 'prod'}))\" && vite build && electron-builder build --win -p always",
+    "build:dev": "node -e \"const fs=require('fs'); fs.writeFileSync('config.json', JSON.stringify({env: 'dev'}))\" && vite build && electron-builder build --win -p always",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "build": {
     "appId": "com.sapius.desktop",
     "productName": "Sapius Desktop",
     "directories": {
-      "output": "dist"
+      "output": "release"
     },
     "win": {
       "target": "nsis",
-      "icon": "tray_icon.png",
+      "icon": "icono-sapius.png",
       "cscLink": "dev-certificate.pfx",
       "cscKeyPassword": "SapiusDev2026"
     },

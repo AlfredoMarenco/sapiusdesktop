@@ -65,7 +65,22 @@ function registerStrikeFromMain(action, details) {
     });
 }
 
-let BASE_URL = 'http://127.0.0.1:8000'; // Default
+let config = { env: 'dev' };
+try {
+    const configPath = path.join(__dirname, '../../config.json');
+    if (fs.existsSync(configPath)) {
+        config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    }
+} catch (e) {
+    console.error('Error loading config.json:', e);
+}
+
+const DEFAULT_SERVERS = {
+    dev: 'https://test.sapius.com.mx',
+    prod: 'https://sapius.com.mx'
+};
+
+let BASE_URL = DEFAULT_SERVERS[config.env] || 'https://test.sapius.com.mx';
 let API_URL = `${BASE_URL}/api`;
 
 // Configuración de electron-updater
@@ -172,7 +187,7 @@ function createWindow() {
         width: 1200,
         height: 800,
         backgroundColor: '#0f172a',
-        icon: path.join(__dirname, '../../tray_icon.png'),
+        icon: path.join(__dirname, '../../icono-sapius.png'),
         webPreferences: {
             preload: path.join(__dirname, 'preload.js'),
             nodeIntegration: false,
@@ -400,7 +415,7 @@ app.whenReady().then(() => {
         }
     }, 1000);
 
-    const iconPath = path.join(__dirname, '../../tray_icon.png');
+    const iconPath = path.join(__dirname, '../../icono-sapius.png');
     const icon = nativeImage.createFromPath(iconPath);
     appIcon = new Tray(icon.resize({ width: 16, height: 16 }));
     
