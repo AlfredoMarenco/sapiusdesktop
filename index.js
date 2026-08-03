@@ -110,13 +110,9 @@ function createWindow() {
         log(`[PAGE CONSOLE] [Level:${level}] ${message} (Source: ${sourceId}:${line})`, 'PAGE_CONSOLE');
     });
     
-    // Interceptar el botón de cerrar (X)
+    // Interceptar el botón de cerrar (X) para salir completamente
     mainWindow.on('close', (event) => {
-        if (!isQuitting) {
-            event.preventDefault();
-            mainWindow.hide();
-            log('Ventana oculta en segundo plano.');
-        }
+        isQuitting = true;
     });
 
     // Inyectar el encabezado X-Sapius-MAC en todas las peticiones a la plataforma de forma dinámica
@@ -188,7 +184,7 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
-        // No cerrar, dejar que el tray maneje la app
+        app.quit();
     }
 });
 

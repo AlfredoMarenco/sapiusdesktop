@@ -1,13 +1,13 @@
 {
   "name": "sapiusdesktop",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Aula virtual de Sapius para escritorio",
   "license": "ISC",
   "author": "marencocode",
   "type": "commonjs",
   "main": "src/main/index.js",
   "scripts": {
-    "start": "node -e \"const fs=require('fs'); fs.writeFileSync('config.json', JSON.stringify({env: 'dev'}))\" && concurrently -k \"vite\" \"electron .\"",
+    "start": "node -e \"const fs=require('fs'); fs.writeFileSync('config.json', JSON.stringify({env: 'prod'}))\" && concurrently -k \"vite\" \"electron .\"",
     "dev": "node -e \"const fs=require('fs'); fs.writeFileSync('config.json', JSON.stringify({env: 'dev'}))\" && concurrently -k \"vite\" \"electron .\"",
     "build:prod": "node -e \"const fs=require('fs'); fs.writeFileSync('config.json', JSON.stringify({env: 'prod'}))\" && vite build && electron-builder build --win -p always",
     "build:dev": "node -e \"const fs=require('fs'); fs.writeFileSync('config.json', JSON.stringify({env: 'dev'}))\" && vite build && electron-builder build --win -p always",

@@ -59,7 +59,9 @@ export default function CourseDetail({
   onPrevPdfPage,
   onNextPdfPage,
   pdfDoc,
-  onGoToPdfPage
+  onGoToPdfPage,
+  onLaunchInteractivePdf,
+  onDownloadInteractivePdfRaw
 }) {
   const [opinionPending, setOpinionPending] = React.useState(false);
   const [opinionSubmitting, setOpinionSubmitting] = React.useState(false);
@@ -697,13 +699,13 @@ export default function CourseDetail({
                             const remainingOportunidades = pr.oportunidades - finishedAttempts.length;
 
                             let buttonText = 'Presentar';
-                            let buttonColorClass = 'bg-blue-600 hover:bg-blue-500 text-white';
+                            let buttonColorClass = 'bg-blue-600 hover:bg-blue-500 text-[#ffffff]';
                             let isDisabled = false;
                             let onClickAction = () => onLaunchExam(pr.id);
 
                             if (pendingFeedbackExam) {
                               buttonText = 'Ver retroalimentación';
-                              buttonColorClass = 'bg-emerald-600 hover:bg-emerald-500 text-white';
+                              buttonColorClass = 'bg-emerald-600 hover:bg-emerald-500 text-[#ffffff]';
                               onClickAction = () => onLaunchExam(pr.id, pendingFeedbackExam.id);
                             } else if (remainingOportunidades <= 0) {
                               buttonText = 'Sin intentos';
@@ -728,6 +730,37 @@ export default function CourseDetail({
                               </div>
                             );
                           })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Material Interactivo */}
+                    {activeLesson.leccion && activeLesson.leccion.material_pdfs && activeLesson.leccion.material_pdfs.length > 0 && (
+                      <div className="bg-white/[0.015] border border-white/5 rounded-2xl p-5 flex flex-col gap-4">
+                        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Material Interactivo</h3>
+                        <div className="flex flex-col gap-2">
+                          {activeLesson.leccion.material_pdfs.map((mat) => (
+                            <div key={mat.id} className="flex justify-between items-center py-2 px-3 bg-slate-900 border border-white/5 rounded-xl gap-2">
+                              <span className="text-xs text-white truncate max-w-[120px] font-semibold" title={mat.titulo}>
+                                {mat.titulo}
+                              </span>
+                              <div className="flex items-center gap-1.5 shrink-0">
+                                <button 
+                                  onClick={() => onLaunchInteractivePdf(mat.id)}
+                                  className="py-1 px-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-[10px] font-bold cursor-pointer transition-all"
+                                >
+                                  Resolver
+                                </button>
+                                <button 
+                                  onClick={() => onDownloadInteractivePdfRaw(mat.id)}
+                                  className="py-1 px-2 bg-slate-800 hover:bg-slate-700 text-slate-350 border border-white/5 rounded-lg text-[10px] font-bold cursor-pointer transition-all"
+                                  title="Descargar PDF Original"
+                                >
+                                  📥
+                                </button>
+                              </div>
+                            </div>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -767,7 +800,7 @@ export default function CourseDetail({
                           <button 
                             type="submit" 
                             disabled={!uploadedFile || submittingHomework}
-                            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 cursor-pointer"
+                            className="w-full py-2 px-4 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-[#ffffff] rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 cursor-pointer"
                           >
                             {submittingHomework ? 'Subiendo...' : 'Enviar Entrega'}
                           </button>
@@ -786,16 +819,16 @@ export default function CourseDetail({
             <div className="course-detail-header mb-4">
               <h2 className="text-sm font-bold text-slate-350 uppercase tracking-wide">Plan de Estudios del Curso</h2>
               
-              <div className="progress-bar-container max-w-md mt-2">
-                <div className="flex justify-between text-xs text-slate-400 mb-1">
+              <div className="progress-bar-container max-w-md mt-3 bg-white/[0.01] border border-white/5 rounded-2xl p-4">
+                <div className="flex justify-between text-xs text-slate-350 mb-1.5 font-bold">
                   <span>Progreso del Curso</span>
-                  <strong className="text-blue-400">
+                  <strong className="text-blue-400 text-sm font-extrabold tracking-wide">
                     {`${selectedCourse.globalProgress || 0}%`}
                   </strong>
                 </div>
-                <div className="w-full bg-white/5 h-2 rounded-full overflow-hidden">
+                <div className="w-full bg-slate-950/50 h-2.5 rounded-full overflow-hidden border border-white/5 p-[1px]">
                   <div 
-                    className="h-full bg-blue-500 transition-all duration-300" 
+                    className="h-full rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 shadow-[0_0_8px_rgba(99,102,241,0.5)] transition-all duration-500 ease-out" 
                     style={{ width: `${selectedCourse.globalProgress || 0}%` }}
                   ></div>
                 </div>

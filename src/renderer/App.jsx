@@ -8,6 +8,9 @@ import CourseDetail from './components/CourseDetail';
 import ExamOverlay from './components/ExamOverlay';
 import ProfileView from './components/ProfileView';
 import InteractiveTutorial from './components/InteractiveTutorial';
+import GradesView from './components/GradesView';
+import CourseProgressView from './components/CourseProgressView';
+import InteractivePdfOverlay from './components/InteractivePdfOverlay';
 import iconoSapius from './assets/img/icono-sapius.svg';
 
 function LogoSapius({ className }) {
@@ -132,6 +135,16 @@ export default function App() {
   // Calendar Tab State
   const [calendarSchedule, setCalendarSchedule] = useState([]);
   const [loadingCalendar, setLoadingCalendar] = useState(false);
+  const [weeklyCalendars, setWeeklyCalendars] = useState([]);
+
+  // Grades Tab State
+  const [gradesData, setGradesData] = useState(null);
+  const [loadingGrades, setLoadingGrades] = useState(false);
+
+  // Detailed Course Progress State
+  const [courseProgressData, setCourseProgressData] = useState(null);
+  const [loadingCourseProgress, setLoadingCourseProgress] = useState(false);
+  const [activeInteractivePdfId, setActiveInteractivePdfId] = useState(null);
 
   // PDF.js State variables
   const [pdfDoc, setPdfDoc] = useState(null);
@@ -598,6 +611,10 @@ export default function App() {
         loadHomeworkTab();
       } else if (activeTab === 'calendar') {
         loadCalendarTab();
+      } else if (activeTab === 'grades') {
+        loadGradesTab();
+      } else if (activeTab === 'progress') {
+        loadCourseProgressTab();
       }
     }
   }, [activeTab, currentView]);
@@ -623,18 +640,71 @@ export default function App() {
     setLoadingCalendar(true);
     try {
       const cpId = selectedCourse ? selectedCourse.curso_programado.id : 0;
-      const res = await window.sapiusAPI.apiGet(`/electron/course/${cpId}`);
+      const res = await window.sapiusAPI.apiGet(`/electron/calendar/${cpId}`);
       if (res && res.success) {
-        // Build mock calendar from dates or fetch actual
-        setCalendarSchedule([
-          { label: 'Inicio del curso', date: res.data.curso_programado.fecha_inicio },
-          { label: 'Fin del curso', date: res.data.curso_programado.fecha_fin },
-        ]);
+        setCalendarSchedule(res.data.events || []);
+        setWeeklyCalendars(res.data.weekly_calendars || []);
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoadingCalendar(false);
+    }
+  };
+
+  const loadGradesTab = async () => {
+    if (!window.sapiusAPI) return;
+    setLoadingGrades(true);
+    try {
+      let inscId = activeInscripcionId;
+      if (!inscId && selectedCourse && selectedCourse.inscrito) {
+        inscId = selectedCourse.inscrito.id;
+      }
+      const res = await window.sapiusAPI.apiGet(`/electron/grades/${inscId || 0}`);
+      if (res && res.success) {
+        setGradesData(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingGrades(false);
+    }
+  };
+
+  const loadCourseProgressTab = async () => {
+    if (!window.sapiusAPI) return;
+    setLoadingCourseProgress(true);
+    try {
+      const cpId = selectedCourse ? selectedCourse.curso_programado.id : 0;
+      const res = await window.sapiusAPI.apiGet(`/electron/course-progress/${cpId}`);
+      if (res && res.success) {
+        setCourseProgressData(res.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoadingCourseProgress(false);
+    }
+  };
+
+  const handleDownloadInteractivePdfRaw = async (id) => {
+    if (!window.sapiusAPI) return;
+    try {
+      const token = localStorage.getItem('token') || '';
+      const url = `${currentServer}/electron/material-pdfs/${id}/download-raw`;
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const blob = await response.blob();
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = `material_${id}.pdf`;
+      link.click();
+    } catch (err) {
+      console.error(err);
+      alert("Error al descargar el PDF.");
     }
   };
 
@@ -802,6 +872,22 @@ export default function App() {
     );
   }
 
+  // --- OVERLAY: Interactive PDF Overlay ---
+  if (activeInteractivePdfId) {
+    return (
+      <InteractivePdfOverlay
+        materialId={activeInteractivePdfId}
+        serverUrl={currentServer}
+        onClose={() => {
+          setActiveInteractivePdfId(null);
+          if (activeLesson && selectedCourse) {
+            handleSelectLesson(activeLesson.leccion.id, selectedCourse.curso_programado.id);
+          }
+        }}
+      />
+    );
+  }
+
   // --- OVERLAY: New ExamOverlay top-level routing ---
   if (activeExamParams) {
     return (
@@ -815,7 +901,7 @@ export default function App() {
           onExamFinished={async () => {
             if (selectedCourse) {
               if (activeLesson) {
-                const lessonRes = await window.sapiusAPI.apiGet(`/electron/lesson/details/${activeLesson.leccion.id}/${selectedCourse.curso_programado.id}`);
+                const lessonRes = await window.sapiusAPI.apiGet(`/electron/lesson/${activeLesson.leccion.id}/${selectedCourse.curso_programado.id}`);
                 if (lessonRes && lessonRes.success) {
                   setActiveLesson(lessonRes.data);
                 }
@@ -888,35 +974,71 @@ export default function App() {
               </span>
             </button>
 
-            <button 
-              id="btn-nav-homework"
-              onClick={() => { setActiveTab('homework'); }}
-              className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'homework' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
-            >
-              <svg className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-105 ${activeTab === 'homework' ? 'text-sapius-azul' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 20h9" />
-                <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
-              </svg>
-              <span className={`inline-block transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 max-w-0 overflow-hidden group-hover:opacity-100 group-hover:max-w-[150px]' : 'opacity-100 max-w-[150px]'}`}>
-                Mis Tareas
-              </span>
-            </button>
+            {selectedCourse && (
+              <>
+                <button 
+                  id="btn-nav-progress"
+                  onClick={() => { setActiveTab('progress'); }}
+                  className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'progress' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
+                >
+                  <svg className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-105 ${activeTab === 'progress' ? 'text-sapius-azul' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20V10" />
+                    <path d="M18 20V4" />
+                    <path d="M6 20v-4" />
+                  </svg>
+                  <span className={`inline-block transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 max-w-0 overflow-hidden group-hover:opacity-100 group-hover:max-w-[150px]' : 'opacity-100 max-w-[150px]'}`}>
+                    Progreso de Lecciones
+                  </span>
+                </button>
 
-            <button 
-              id="btn-nav-calendar"
-              onClick={() => { setActiveTab('calendar'); }}
-              className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'calendar' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
-            >
-              <svg className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-105 ${activeTab === 'calendar' ? 'text-sapius-azul' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
-                <line x1="16" x2="16" y1="2" y2="6" />
-                <line x1="8" x2="8" y1="2" y2="6" />
-                <line x1="3" x2="21" y1="10" y2="10" />
-              </svg>
-              <span className={`inline-block transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 max-w-0 overflow-hidden group-hover:opacity-100 group-hover:max-w-[150px]' : 'opacity-100 max-w-[150px]'}`}>
-                Calendario
-              </span>
-            </button>
+                <button 
+                  id="btn-nav-homework"
+                  onClick={() => { setActiveTab('homework'); }}
+                  className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'homework' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
+                >
+                  <svg className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-105 ${activeTab === 'homework' ? 'text-sapius-azul' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M12 20h9" />
+                    <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                  </svg>
+                  <span className={`inline-block transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 max-w-0 overflow-hidden group-hover:opacity-100 group-hover:max-w-[150px]' : 'opacity-100 max-w-[150px]'}`}>
+                    Mis Tareas
+                  </span>
+                </button>
+
+                <button 
+                  id="btn-nav-calendar"
+                  onClick={() => { setActiveTab('calendar'); }}
+                  className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'calendar' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
+                >
+                  <svg className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-105 ${activeTab === 'calendar' ? 'text-sapius-azul' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2" />
+                    <line x1="16" x2="16" y1="2" y2="6" />
+                    <line x1="8" x2="8" y1="2" y2="6" />
+                    <line x1="3" x2="21" y1="10" y2="10" />
+                  </svg>
+                  <span className={`inline-block transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 max-w-0 overflow-hidden group-hover:opacity-100 group-hover:max-w-[150px]' : 'opacity-100 max-w-[150px]'}`}>
+                    Calendario
+                  </span>
+                </button>
+
+                <button 
+                  id="btn-nav-grades"
+                  onClick={() => { setActiveTab('grades'); }}
+                  className={`flex items-center rounded-xl font-semibold text-xs md:text-sm transition-all duration-200 shrink-0 cursor-pointer ${isSidebarCollapsed ? 'w-10 h-10 md:w-11 md:h-11 justify-center p-0 mx-auto group-hover:w-full group-hover:h-auto group-hover:py-3 group-hover:px-4 group-hover:justify-start group-hover:gap-3.5' : 'w-full py-3 px-4 gap-3.5'} ${activeTab === 'grades' ? 'text-slate-100 bg-sapius-azul/10 dark:bg-sapius-naranja border-l-4 border-sapius-azul shadow-sm shadow-sapius-azul/5 font-bold' : 'text-slate-400 hover:text-slate-100 hover:bg-white/[0.02]'}`}
+                >
+                  <svg className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 group-hover:scale-105 ${activeTab === 'grades' ? 'text-sapius-azul' : 'text-slate-400'}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                  <span className={`inline-block transition-all duration-300 ${isSidebarCollapsed ? 'opacity-0 max-w-0 overflow-hidden group-hover:opacity-100 group-hover:max-w-[150px]' : 'opacity-100 max-w-[150px]'}`}>
+                    Calificaciones
+                  </span>
+                </button>
+              </>
+            )}
 
             <button 
               id="btn-nav-support"
@@ -1115,6 +1237,8 @@ export default function App() {
                     onNextPdfPage={() => setPdfPageNum(prev => Math.min(prev + 1, pdfPageCount))}
                     pdfDoc={pdfDoc}
                     onGoToPdfPage={(num) => setPdfPageNum(num)}
+                    onLaunchInteractivePdf={(id) => setActiveInteractivePdfId(id)}
+                    onDownloadInteractivePdfRaw={handleDownloadInteractivePdfRaw}
                   />
                 )}
               </>
@@ -1135,7 +1259,31 @@ export default function App() {
 
             {/* TABS 3: Calendar */}
             {activeTab === 'calendar' && (
-              <CalendarView calendarSchedule={calendarSchedule} loading={loadingCalendar} courseSelected={!!selectedCourse} />
+              <CalendarView 
+                calendarSchedule={calendarSchedule} 
+                weeklyCalendars={weeklyCalendars}
+                serverUrl={currentServer}
+                loading={loadingCalendar} 
+                courseSelected={!!selectedCourse} 
+              />
+            )}
+
+            {/* TABS 3.5: Grades */}
+            {activeTab === 'grades' && (
+              <GradesView 
+                gradesData={gradesData} 
+                loading={loadingGrades} 
+                courseSelected={!!selectedCourse} 
+              />
+            )}
+
+            {/* TABS 3.7: Course Progress Detailed */}
+            {activeTab === 'progress' && (
+              <CourseProgressView 
+                progressData={courseProgressData} 
+                loading={loadingCourseProgress} 
+                courseSelected={!!selectedCourse} 
+              />
             )}
 
             {/* TABS 4: Support */}

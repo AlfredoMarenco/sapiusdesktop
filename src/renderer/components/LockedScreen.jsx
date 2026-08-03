@@ -197,13 +197,13 @@ export default function LockedScreen({ onLogout, onUnlock }) {
             href="https://wa.me/529993648594?text=Hola,%20mi%20cuenta%20Sapius%20ha%20sido%20bloqueada" 
             target="_blank" 
             rel="noreferrer"
-            className="py-3 px-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 text-decoration-none inline-flex items-center justify-center gap-1.5"
+            className="py-3 px-6 bg-emerald-600 hover:bg-emerald-500 text-[#ffffff] rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 text-decoration-none inline-flex items-center justify-center gap-1.5"
           >
             💬 Contactar Soporte Técnico
           </a>
           <button 
             onClick={onLogout}
-            className="py-3 px-6 bg-rose-600 hover:bg-rose-500 text-white rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 cursor-pointer"
+            className="py-3 px-6 bg-rose-600 hover:bg-rose-500 text-[#ffffff] rounded-xl text-xs font-bold transition-all shadow-md active:scale-98 cursor-pointer"
           >
             Cerrar Sesión
           </button>

@@ -30,7 +30,7 @@ export default function SupportView() {
           href="https://wa.me/529993648594?text=Hola,%20necesito%20soporte%20tecnico%20con%20la%20aplicacion%20de%20Sapius" 
           target="_blank" 
           rel="noreferrer"
-          className="inline-flex justify-center items-center py-3 px-6 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[11px] sm:text-xs font-bold transition-all shadow-md active:scale-98 text-decoration-none"
+          className="inline-flex justify-center items-center py-3 px-6 bg-emerald-600 hover:bg-emerald-500 text-[#ffffff] rounded-xl text-[11px] sm:text-xs font-bold transition-all shadow-md active:scale-98 text-decoration-none"
         >
           💬 Chatear con Soporte en WhatsApp
         </a>
