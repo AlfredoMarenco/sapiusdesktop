@@ -101,6 +101,8 @@ export default function App() {
   const [updateStatus, setSplashStatus] = useState('Buscando actualizaciones de Sapius Desktop...');
   const [downloadProgress, setDownloadProgress] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
+  const [updateError, setUpdateError] = useState(null);
+  const [isUpdating, setIsUpdating] = useState(false);
   
   // Courses Data
   const [courses, setCourses] = useState([]);
@@ -178,13 +180,15 @@ export default function App() {
 
       // Evitar que la pantalla de carga (splash) quede congelada en desarrollo,
       // ya que autoUpdater.checkForUpdates() se omite si la app no está empaquetada y no dispara ningún evento.
-      const isDevMode = window.location.hostname === 'localhost' || window.location.port === '5173';
+      const isDevMode = false; // Deshabilitado temporalmente para pruebas del actualizador
 
       if (isDevMode) {
         transitionToSelector();
       } else if (window.sapiusAPI.onUpdateAvailable) {
         window.sapiusAPI.onUpdateAvailable((info) => {
-          setSplashStatus(`Descargando actualización v${info.version}...`);
+          setIsUpdating(true);
+          setUpdateError(null);
+          setSplashStatus(`Nueva versión encontrada (v${info.version}). Descargando actualización obligatoria...`);
           setShowProgress(true);
         });
 
@@ -200,12 +204,13 @@ export default function App() {
         });
 
         window.sapiusAPI.onUpdateNotAvailable(() => {
+          setUpdateError(null);
           transitionToSelector();
         });
 
         window.sapiusAPI.onUpdaterError((err) => {
           console.warn("Error del actualizador al iniciar:", err);
-          transitionToSelector();
+          setUpdateError(err || "Error al buscar actualizaciones.");
         });
 
         window.sapiusAPI.checkForUpdates();
@@ -691,7 +696,7 @@ export default function App() {
     if (!window.sapiusAPI) return;
     try {
       const token = localStorage.getItem('token') || '';
-      const url = `${currentServer}/electron/material-pdfs/${id}/download-raw`;
+      const url = `${currentServer}/api/electron/material-pdfs/${id}/download-raw`;
       const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -717,13 +722,39 @@ export default function App() {
     return (
       <div className="min-h-screen flex justify-center items-center bg-slate-950 text-white font-sans">
         <div className="bg-slate-900/30 border border-white/5 p-12 rounded-3xl w-full max-w-[420px] mx-4 text-center shadow-2xl backdrop-blur-xl">
-          <LogoSapius className="h-12 mx-auto mb-8 text-white" />
-          <div className="spinner my-5 mx-auto w-8 h-8 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
-          <p className="text-sm font-medium text-slate-350">{updateStatus}</p>
-          {showProgress && (
-            <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mt-4">
-              <div className="h-full bg-blue-500 transition-all duration-100" style={{ width: `${downloadProgress}%` }}></div>
+          <LogoSapius className="h-12 mx-auto mb-8 text-white animate-pulse" />
+          
+          {updateError ? (
+            <div className="flex flex-col items-center gap-4 mt-2">
+              <span className="text-4xl block animate-bounce">⚠️</span>
+              <h3 className="font-bold text-sm text-rose-500 uppercase tracking-wider">Actualización Obligatoria</h3>
+              <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                {isUpdating 
+                  ? "Ocurrió un error al descargar la nueva actualización obligatoria. Por favor verifica tu conexión a internet para continuar."
+                  : "No se pudo validar la versión del sistema con el servidor. Es obligatorio contar con la versión más reciente para poder iniciar sesión."}
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  setUpdateError(null);
+                  setSplashStatus("Buscando actualizaciones de Sapius Desktop...");
+                  window.sapiusAPI.checkForUpdates();
+                }}
+                className="w-full py-2.5 px-4 mt-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer shadow-md shadow-blue-500/10 active:scale-[0.98] border border-blue-400/10"
+              >
+                🔄 Reintentar Validación
+              </button>
             </div>
+          ) : (
+            <>
+              <div className="spinner my-5 mx-auto w-8 h-8 border-2 border-white/10 border-t-blue-500 rounded-full animate-spin"></div>
+              <p className="text-xs sm:text-sm font-medium text-slate-350">{updateStatus}</p>
+              {showProgress && (
+                <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden mt-4">
+                  <div className="h-full bg-blue-500 transition-all duration-100" style={{ width: `${downloadProgress}%` }}></div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>

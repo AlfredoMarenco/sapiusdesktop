@@ -63,7 +63,7 @@ export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }
 
     const renderPdf = async () => {
       try {
-        const pdfUrl = `${serverUrl}/electron/material-pdfs/${materialId}/download-raw`;
+        const pdfUrl = `${serverUrl}/api/electron/material-pdfs/${materialId}/download-raw`;
         const response = await fetch(pdfUrl);
         const arrayBuffer = await response.arrayBuffer();
         
@@ -348,60 +348,17 @@ export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }
     };
   }, [loading, material, isHighlighterMode, zoomScale]);
 
-  // Anti-Plagiarism Security Listeners
+  // Anti-Plagiarism Security Listeners (Desactivados por solicitud)
   useEffect(() => {
-    const handleBlur = () => setIsBlurred(true);
+    const handleBlur = () => setIsBlurred(false);
     const handleFocus = () => setIsBlurred(false);
-
-    const handleContextMenu = (e) => {
-      e.preventDefault();
-      triggerStrike("El menú contextual (clic derecho) está desactivado para prevenir copia no autorizada.");
-    };
-
-    const handleKeyDown = (e) => {
-      const isCtrlOrCmd = e.ctrlKey || e.metaKey;
-      if (e.key === 'Control' || e.key === 'Meta' || isCtrlOrCmd) {
-        const keyLower = e.key.toLowerCase();
-        const forbiddenKeys = ['c', 'v', 'x', 'a', 'p', 's', 'u', 'i', 'j'];
-        if (e.key === 'Control' || e.key === 'Meta' || forbiddenKeys.includes(keyLower)) {
-          e.preventDefault();
-          e.stopPropagation();
-          triggerStrike("El uso de la tecla Ctrl / Cmd y atajos de copia o impresión están bloqueados.");
-          return false;
-        }
-      }
-
-      if (e.key === 'F12') {
-        e.preventDefault();
-        triggerStrike("Acceso a Herramientas de Desarrollador bloqueado.");
-        return false;
-      }
-    };
-
-    const handleCopy = (e) => {
-      e.preventDefault();
-      triggerStrike("Copiado de texto bloqueado.");
-    };
-
-    const handleCut = (e) => {
-      e.preventDefault();
-      triggerStrike("Corte de texto bloqueado.");
-    };
 
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
-    document.addEventListener('contextmenu', handleContextMenu);
-    document.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('copy', handleCopy);
-    document.addEventListener('cut', handleCut);
 
     return () => {
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('focus', handleFocus);
-      document.removeEventListener('contextmenu', handleContextMenu);
-      document.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('copy', handleCopy);
-      document.removeEventListener('cut', handleCut);
     };
   }, [strikeCount]);
 
@@ -452,7 +409,7 @@ export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }
   const handleDownloadResolved = async () => {
     try {
       // Fetch original PDF bytes
-      const pdfUrl = `${serverUrl}/electron/material-pdfs/${materialId}/download-raw`;
+      const pdfUrl = `${serverUrl}/api/electron/material-pdfs/${materialId}/download-raw`;
       const existingPdfBytes = await fetch(pdfUrl).then(res => res.arrayBuffer());
 
       // Load PDF via pdf-lib

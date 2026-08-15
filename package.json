@@ -1,6 +1,6 @@
 {
   "name": "sapiusdesktop",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "Aula virtual de Sapius para escritorio",
   "license": "ISC",
   "author": "marencocode",
@@ -31,7 +31,8 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Sapius Desktop",
-      "language": "1034"
+      "language": "1034",
+      "artifactName": "Sapius Desktop Test Setup ${version}.${ext}"
     },
     "publish": [
       {

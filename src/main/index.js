@@ -85,6 +85,7 @@ let API_URL = `${BASE_URL}/api`;
 
 // Configuración de electron-updater
 autoUpdater.autoDownload = true;
+autoUpdater.forceDevUpdateConfig = true;
 autoUpdater.logger = {
     info: (msg) => log(`[UPDATER] ${msg}`, 'INFO'),
     warn: (msg) => log(`[UPDATER] ${msg}`, 'WARN'),
@@ -200,8 +201,8 @@ function createWindow() {
     // Quitar menú superior (File, Edit, Help, etc.)
     mainWindow.removeMenu();
 
-    // Activar protección de contenido a nivel de OS (Evita capturas/grabaciones)
-    mainWindow.setContentProtection(true);
+    // Activar protección de contenido a nivel de OS (Evita capturas/grabaciones) - Desactivado por solicitud
+    mainWindow.setContentProtection(false);
 
     const isDev = !app.isPackaged;
     if (isDev) {
@@ -210,99 +211,14 @@ function createWindow() {
         mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
     }
 
-    // Interceptar atajos de teclado del estudiante
+    // Interceptar atajos de teclado del estudiante (Desactivado por solicitud)
     mainWindow.webContents.on('before-input-event', (event, input) => {
-        if (input.type !== 'keyDown') return;
-
-        const isMac = process.platform === 'darwin';
-        const isCtrlOfTheOS = isMac ? input.meta : input.control;
-        const isShift = input.shift;
-        const key = input.key.toLowerCase();
-
-        // Registrar en consola de Electron para depuración
-        log(`[KEYLOG] Tecla: "${input.key}" (code: ${input.code}) | Ctrl/Cmd: ${isCtrlOfTheOS} | Shift: ${isShift}`);
-
-        // Solo restringir si el usuario está autenticado y tiene rol 'alumno'
-        if (apiToken && userRole !== 'alumno') {
-            return;
-        }
-
-        // Detectar si presionan la combinación Ctrl + Shift sola
-        if (isCtrlOfTheOS && isShift && (key === 'shift' || key === 'control')) {
-            event.preventDefault();
-            registerStrikeFromMain('Restricted Key / Modifier', 'Combinación Ctrl + Shift detectada');
-            return;
-        }
-
-        // 1. Windows PrintScreen
-        if (input.key === 'PrintScreen') {
-            event.preventDefault();
-            registerStrikeFromMain('PrintScreen', 'PrintScreen key pressed');
-            return;
-        }
-
-        // 2. Mac Screenshots: Cmd+Shift+3, 4, 5
-        if (isMac && input.meta && input.shift && ['3', '4', '5'].includes(input.key)) {
-            event.preventDefault();
-            registerStrikeFromMain('Mac Screenshot', `Mac screenshot shortcut (Cmd+Shift+${input.key})`);
-            return;
-        }
-
-        // 3. Windows Snipping Tool: Win+Shift+S (key: 's', code: 'KeyS')
-        if (!isMac && input.meta && input.shift && key === 's') {
-            event.preventDefault();
-            registerStrikeFromMain('Snipping Tool', 'Windows Snipping Tool (Win+Shift+S)');
-            return;
-        }
-
-        // 3.5 Browser Screenshot Shortcut: Ctrl + Shift + S
-        if (isCtrlOfTheOS && isShift && key === 's') {
-            event.preventDefault();
-            registerStrikeFromMain('PrintScreen', 'Browser Screenshot Shortcut (Ctrl+Shift+S)');
-            return;
-        }
-
-        // 4. Ctrl/Cmd + P (Print), S (Save), C (Copy), X (Cut), U (View Source)
-        if (isCtrlOfTheOS && ['p', 's', 'c', 'x', 'u'].includes(key)) {
-            event.preventDefault();
-            let actionName = 'Shortcut';
-            if (key === 'p') actionName = 'PrintScreen';
-            if (key === 's') actionName = 'Save';
-            if (key === 'c') actionName = 'Copy';
-            if (key === 'x') actionName = 'Cut';
-            if (key === 'u') actionName = 'View Source';
-            registerStrikeFromMain(actionName, `Shortcut Ctrl/Cmd + ${key.toUpperCase()}`);
-            return;
-        }
-
-        // 5. DevTools F12
-        if (input.key === 'F12') {
-            event.preventDefault();
-            registerStrikeFromMain('F12', 'F12 key pressed');
-            return;
-        }
-
-        // 6. DevTools Ctrl/Cmd+Shift+I / J / C
-        if (isCtrlOfTheOS && isShift && ['i', 'j', 'c'].includes(key)) {
-            event.preventDefault();
-            registerStrikeFromMain('DevTools', `DevTools shortcut (Ctrl+Shift+${key.toUpperCase()})`);
-            return;
-        }
-
-        // 7. Volumen
-        if (['volumeup', 'volumedown', 'volumemute'].includes(key)) {
-            event.preventDefault();
-            registerStrikeFromMain('Volume Key', `Volume key pressed (${input.key})`);
-            return;
-        }
+        // Proteccion antiplagio desactivada
     });
 
-    // Bloquear Clic Derecho y registrar strike
+    // Bloquear Clic Derecho y registrar strike (Desactivado por solicitud)
     mainWindow.webContents.on('context-menu', (event) => {
-        if (apiToken && userRole === 'alumno') {
-            event.preventDefault();
-            registerStrikeFromMain('Right Click', 'Right click context menu attempt');
-        }
+        // Proteccion antiplagio desactivada
     });
     
     mainWindow.on('close', (event) => {
@@ -374,46 +290,11 @@ app.whenReady().then(() => {
     globalShortcut.register('F12', () => {
         const win = BrowserWindow.getFocusedWindow();
         if (win) {
-            if (apiToken && userRole === 'alumno') {
-                registerStrikeFromMain('F12', 'F12 global shortcut pressed');
-            } else {
-                win.webContents.toggleDevTools();
-            }
+            win.webContents.toggleDevTools();
         }
     });
 
-    try {
-        globalShortcut.register('Super+Shift+S', () => {
-            if (apiToken && userRole === 'alumno') {
-                registerStrikeFromMain('Snipping Tool', 'Windows Snipping Tool (Win+Shift+S) detected globally');
-            }
-        });
-    } catch (e) {
-        log('Fallo al registrar atajo global Win+Shift+S');
-    }
-
-    try {
-        globalShortcut.register('PrintScreen', () => {
-            if (apiToken && userRole === 'alumno') {
-                registerStrikeFromMain('PrintScreen', 'PrintScreen global shortcut pressed');
-            }
-        });
-    } catch (e) {
-        log('Fallo al registrar atajo global PrintScreen');
-    }
-
-    // Monitoreo del portapapeles en segundo plano para detectar capturas de pantalla (Snipping Tool, PrintScreen, etc.)
-    setInterval(() => {
-        if (apiToken && userRole === 'alumno') {
-            const { clipboard } = require('electron');
-            const image = clipboard.readImage();
-            if (!image.isEmpty()) {
-                clipboard.clear();
-                registerStrikeFromMain('PrintScreen', 'Captura de pantalla guardada en portapapeles');
-                log('[CLIPBOARD] Imagen de captura detectada y eliminada del portapapeles.');
-            }
-        }
-    }, 1000);
+    // Atajos globales y monitoreo de portapapeles desactivados por solicitud de desactivación de antiplagio
 
     const iconPath = path.join(__dirname, '../../icono-sapius.png');
     const icon = nativeImage.createFromPath(iconPath);
