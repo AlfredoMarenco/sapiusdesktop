@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
  * Componente Overlay para contestar PDFs interactivos de Sapius.
  * Emula el comportamiento completo y la seguridad anti-plagio de viewer.blade.php.
  */
-export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }) {
+export default function InteractivePdfOverlay({ materialId, serverUrl, onClose, onAccountBlocked }) {
   const [loading, setLoading] = useState(true);
   const [material, setMaterial] = useState(null);
   const [savedAnswers, setSavedAnswers] = useState({});
@@ -19,7 +19,7 @@ export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }
   // Security / Anti-plagiarism
   const [isBlurred, setIsBlurred] = useState(false);
   const [strikeCount, setStrikeCount] = useState(0);
-  const maxStrikes = 5;
+  const [maxStrikes, setMaxStrikes] = useState(100);
 
   const pdfDocRef = useRef(null);
   const viewerContainerRef = useRef(null);
@@ -30,12 +30,16 @@ export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }
       try {
         setLoading(true);
         const res = await window.sapiusAPI.apiGet(`/electron/material-pdfs/${materialId}/show`);
+        if (res?.is_blocked) {
+          onAccountBlocked?.();
+          return;
+        }
         if (res && res.success) {
           const mat = res.data.material;
           const resp = res.data.respuesta;
           
           setMaterial(mat);
-          setFields(mat.fields_config || []);
+          setFields(Array.isArray(mat.fields_config) ? mat.fields_config : []);
           
           const rawAnswers = resp?.respuestas || {};
           if (rawAnswers.inputs) {
@@ -63,8 +67,18 @@ export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }
 
     const renderPdf = async () => {
       try {
-        const pdfUrl = `${serverUrl}/api/electron/material-pdfs/${materialId}/download-raw`;
+        const pdfUrl = `${serverUrl}/api/electron/material-pdfs/${materialId}/download-raw?stream=1`;
         const response = await fetch(pdfUrl);
+        if (!response.ok) {
+          if (response.status === 403) {
+            const errData = await response.json().catch(() => ({}));
+            if (errData?.is_blocked) {
+              onAccountBlocked?.();
+              return;
+            }
+          }
+          throw new Error(`HTTP ${response.status}`);
+        }
         const arrayBuffer = await response.arrayBuffer();
         
         const pdfDoc = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
@@ -348,37 +362,84 @@ export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }
     };
   }, [loading, material, isHighlighterMode, zoomScale]);
 
-  // Anti-Plagiarism Security Listeners (Desactivados por solicitud)
+  // Anti-Plagiarism Security Listeners (Blur on focus loss; free text typing allowed inside PDF fields)
   useEffect(() => {
-    const handleBlur = () => setIsBlurred(false);
+    const handleBlur = () => setIsBlurred(true);
     const handleFocus = () => setIsBlurred(false);
+
+    const isEditableTarget = (target) => {
+      if (!target || typeof target.tagName !== 'string') return false;
+      const tag = target.tagName.toUpperCase();
+      return tag === 'INPUT' || tag === 'TEXTAREA' || Boolean(target.isContentEditable);
+    };
+
+    const handleCopy = (e) => {
+      if (isEditableTarget(e.target)) return;
+      e.preventDefault();
+      triggerStrike('Copiado de contenido bloqueado.', 'Copy');
+    };
+
+    const handleCut = (e) => {
+      if (isEditableTarget(e.target)) return;
+      e.preventDefault();
+      triggerStrike('Corte de contenido bloqueado.', 'Cut');
+    };
 
     window.addEventListener('blur', handleBlur);
     window.addEventListener('focus', handleFocus);
+    document.addEventListener('copy', handleCopy);
+    document.addEventListener('cut', handleCut);
 
     return () => {
       window.removeEventListener('blur', handleBlur);
       window.removeEventListener('focus', handleFocus);
+      document.removeEventListener('copy', handleCopy);
+      document.removeEventListener('cut', handleCut);
     };
-  }, [strikeCount]);
+  }, []);
 
-  const triggerStrike = async (reason) => {
-    const nextStrike = strikeCount + 1;
-    setStrikeCount(nextStrike);
-    alert(`[ADVERTENCIA ANTI-PLAGIO]\nStrike ${nextStrike}/${maxStrikes}: ${reason}`);
-    
-    // Register strike on Laravel server
+  const triggerStrike = async (reason, action = 'Restricted Key / Modifier') => {
+    let nextStrikes = strikeCount;
+    let nextMaxStrikes = maxStrikes;
+    let isBlocked = false;
+
+    // Register strike on Laravel server (0-100 scale)
     if (window.sapiusAPI) {
-      await window.sapiusAPI.apiPost('/register-strike', {
-        action: 'Restricted Key / Modifier',
+      const res = await window.sapiusAPI.apiPost('/register-strike', {
+        action,
         details: `Interactive PDF Mode - ${reason}`
       });
+      const payload = res?.data || res;
+      if (payload) {
+        if (typeof payload.strikes === 'number') {
+          nextStrikes = payload.strikes;
+        }
+        if (typeof payload.max_strikes === 'number') {
+          nextMaxStrikes = payload.max_strikes;
+        }
+        isBlocked = Boolean(
+          res?.is_blocked ||
+          payload.is_blocked ||
+          payload.blocked ||
+          payload.status === 'blocked'
+        );
+      }
     }
 
-    if (nextStrike >= maxStrikes) {
-      alert("Límite de strikes excedido. Saliendo de la clase por seguridad.");
-      onClose();
+    setStrikeCount(nextStrikes);
+    setMaxStrikes(nextMaxStrikes);
+
+    if (isBlocked || nextStrikes >= nextMaxStrikes) {
+      alert("Límite de strikes excedido. Tu cuenta ha sido bloqueada por seguridad.");
+      if (onAccountBlocked) {
+        onAccountBlocked();
+      } else {
+        onClose();
+      }
+      return;
     }
+
+    alert(`[ADVERTENCIA ANTI-PLAGIO]\nStrikes: ${nextStrikes}/${nextMaxStrikes} — ${reason}`);
   };
 
   // Save Answers to Laravel
@@ -394,6 +455,11 @@ export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }
         respuestas: payload
       });
 
+      if (res?.is_blocked) {
+        onAccountBlocked?.();
+        return;
+      }
+
       if (res && res.success) {
         alert("Respuestas guardadas exitosamente.");
       } else {
@@ -407,10 +473,27 @@ export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }
 
   // Compile filled PDF using pdf-lib on client and download
   const handleDownloadResolved = async () => {
+    if (!material?.allow_download) {
+      alert("La descarga de este documento no está habilitada.");
+      return;
+    }
     try {
       // Fetch original PDF bytes
       const pdfUrl = `${serverUrl}/api/electron/material-pdfs/${materialId}/download-raw`;
-      const existingPdfBytes = await fetch(pdfUrl).then(res => res.arrayBuffer());
+      const response = await fetch(pdfUrl);
+      if (!response.ok) {
+        if (response.status === 403) {
+          const errData = await response.json().catch(() => ({}));
+          if (errData?.is_blocked) {
+            onAccountBlocked?.();
+            return;
+          }
+          alert(errData?.message || "No tienes permiso para descargar este PDF.");
+          return;
+        }
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const existingPdfBytes = await response.arrayBuffer();
 
       // Load PDF via pdf-lib
       const { PDFDocument, rgb, StandardFonts } = window.PDFLib;
@@ -588,12 +671,14 @@ export default function InteractivePdfOverlay({ materialId, serverUrl, onClose }
             >
               💾 Guardar Respuestas
             </button>
-            <button 
-              onClick={handleDownloadResolved}
-              className="py-1.5 px-4 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg cursor-pointer"
-            >
-              📥 Descargar Resuelto
-            </button>
+            {Boolean(material?.allow_download) && (
+              <button 
+                onClick={handleDownloadResolved}
+                className="py-1.5 px-4 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg cursor-pointer"
+              >
+                📥 Descargar Resuelto
+              </button>
+            )}
             <button 
               onClick={onClose}
               className="py-1.5 px-3 rounded-lg text-xs font-bold bg-slate-800 hover:bg-slate-700 text-white cursor-pointer"

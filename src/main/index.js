@@ -144,7 +144,9 @@ function setupAutoUpdater() {
     });
 }
 
-app.commandLine.appendSwitch('ignore-certificate-errors');
+if (!app.isPackaged) {
+    app.commandLine.appendSwitch('ignore-certificate-errors');
+}
 
 const logPath = path.join(app.getPath('userData'), 'sapius-detector.log');
 function log(msg, type = 'INFO') {
@@ -201,8 +203,8 @@ function createWindow() {
     // Quitar menú superior (File, Edit, Help, etc.)
     mainWindow.removeMenu();
 
-    // Activar protección de contenido a nivel de OS (Evita capturas/grabaciones) - Desactivado por solicitud
-    mainWindow.setContentProtection(false);
+    // Activar protección de contenido a nivel de OS en producción (evita capturas/grabaciones)
+    mainWindow.setContentProtection(app.isPackaged);
 
     const isDev = !app.isPackaged;
     if (isDev) {
@@ -211,14 +213,76 @@ function createWindow() {
         mainWindow.loadFile(path.join(__dirname, '../../dist/index.html'));
     }
 
-    // Interceptar atajos de teclado del estudiante (Desactivado por solicitud)
+    // Interceptar atajos de teclado del estudiante sin bloquear escritura normal ni Shift/AltGr
     mainWindow.webContents.on('before-input-event', (event, input) => {
-        // Proteccion antiplagio desactivada
+        if (input.type !== 'keyDown') return;
+
+        if (apiToken && userRole && userRole !== 'alumno') {
+            return;
+        }
+
+        const isMac = process.platform === 'darwin';
+        const isAltGr = !isMac && Boolean(input.control) && Boolean(input.alt);
+        if (isAltGr) {
+            return;
+        }
+
+        const hasCtrlOrMeta = Boolean(input.control || input.meta);
+        const key = (input.key || '').toLowerCase();
+        const code = (input.code || '').toLowerCase();
+
+        // 1. PrintScreen
+        if (key === 'printscreen' || code === 'printscreen') {
+            event.preventDefault();
+            registerStrikeFromMain('PrintScreen', 'PrintScreen key pressed');
+            return;
+        }
+
+        // 2. Mac Screenshots: Cmd+Shift+3, 4, 5
+        if (isMac && input.meta && input.shift && ['3', '4', '5'].includes(key)) {
+            event.preventDefault();
+            registerStrikeFromMain('Mac Screenshot', `Mac screenshot shortcut (Cmd+Shift+${key})`);
+            return;
+        }
+
+        // 3. DevTools F12
+        if (key === 'f12' || code === 'f12') {
+            event.preventDefault();
+            registerStrikeFromMain('F12', 'F12 key pressed');
+            return;
+        }
+
+        // 4. DevTools Ctrl/Cmd+Shift+I / J / C
+        if (!input.alt && hasCtrlOrMeta && input.shift && ['i', 'j', 'c'].includes(key)) {
+            event.preventDefault();
+            registerStrikeFromMain('DevTools', `DevTools shortcut (Ctrl/Cmd+Shift+${key.toUpperCase()})`);
+            return;
+        }
+
+        // 5. Ctrl/Cmd + P (Print), S (Save), U (View Source)
+        if (!input.alt && hasCtrlOrMeta && ['p', 's', 'u'].includes(key)) {
+            event.preventDefault();
+            let actionName = 'Shortcut';
+            if (key === 'p') actionName = 'Shortcut Ctrl+P';
+            if (key === 's') actionName = 'Save';
+            if (key === 'u') actionName = 'View Source';
+            registerStrikeFromMain(actionName, `Shortcut Ctrl/Cmd+${key.toUpperCase()}`);
+            return;
+        }
     });
 
-    // Bloquear Clic Derecho y registrar strike (Desactivado por solicitud)
-    mainWindow.webContents.on('context-menu', (event) => {
-        // Proteccion antiplagio desactivada
+    // Bloquear Clic Derecho fuera de campos editables (input/textarea/contenteditable) y registrar strike
+    mainWindow.webContents.on('context-menu', (event, params) => {
+        if (params && params.isEditable) {
+            return;
+        }
+        if (apiToken && userRole && userRole !== 'alumno') {
+            return;
+        }
+        event.preventDefault();
+        if (apiToken) {
+            registerStrikeFromMain('Right Click', 'Right click context menu attempt');
+        }
     });
     
     mainWindow.on('close', (event) => {
@@ -257,15 +321,23 @@ function createWindow() {
         }
     );
 
-    // Habilitar CORS dinámicamente para peticiones a dominios de Sapius (evita bloqueos de origen cruzado en desarrollo)
+    // Habilitar CORS dinámicamente para peticiones a dominios de Sapius (evita bloqueos de origen cruzado)
     session.defaultSession.webRequest.onHeadersReceived(
         { urls: ['*://*/*'] },
         (details, callback) => {
-            const responseHeaders = details.responseHeaders;
+            const responseHeaders = { ...(details.responseHeaders || {}) };
             const url = details.url;
-            const isSapius = url.startsWith(BASE_URL) || url.includes('sapius.com.mx');
+            const isSapius = url.startsWith(BASE_URL) ||
+                             url.includes('sapius.com.mx') ||
+                             url.startsWith('http://localhost') ||
+                             url.startsWith('http://127.0.0.1');
 
             if (isSapius) {
+                Object.keys(responseHeaders).forEach((header) => {
+                    if (header.toLowerCase().startsWith('access-control-')) {
+                        delete responseHeaders[header];
+                    }
+                });
                 responseHeaders['Access-Control-Allow-Origin'] = ['*'];
                 responseHeaders['Access-Control-Allow-Headers'] = ['*'];
                 responseHeaders['Access-Control-Allow-Methods'] = ['GET, POST, OPTIONS, PUT, DELETE'];
@@ -287,12 +359,14 @@ app.whenReady().then(() => {
         });
     }, 3000);
     
-    globalShortcut.register('F12', () => {
-        const win = BrowserWindow.getFocusedWindow();
-        if (win) {
-            win.webContents.toggleDevTools();
-        }
-    });
+    if (!app.isPackaged) {
+        globalShortcut.register('F12', () => {
+            const win = BrowserWindow.getFocusedWindow();
+            if (win) {
+                win.webContents.toggleDevTools();
+            }
+        });
+    }
 
     // Atajos globales y monitoreo de portapapeles desactivados por solicitud de desactivación de antiplagio
 
@@ -382,7 +456,8 @@ ipcMain.handle('api:get', async (event, endpoint) => {
             headers: { 'Authorization': `Bearer ${apiToken}`, 'X-Sapius-MAC': userMac }
         });
         const dataVal = response.data && Object.prototype.hasOwnProperty.call(response.data, 'data') ? response.data.data : response.data;
-        return { success: true, data: dataVal };
+        const isBlocked = Boolean(response.data && (response.data.is_blocked || response.data.blocked));
+        return { success: true, data: dataVal, ...(isBlocked ? { is_blocked: true } : {}) };
     } catch (error) {
         return { 
             success: false, 
@@ -402,7 +477,8 @@ ipcMain.handle('api:post', async (event, { endpoint, payload, isMultipart = fals
         let data = payload;
 
         const response = await axios.post(`${API_URL}${endpoint}`, data, { headers });
-        return { success: true, data: response.data.data || response.data };
+        const isBlocked = Boolean(response.data && (response.data.is_blocked || response.data.blocked));
+        return { success: true, data: response.data.data || response.data, ...(isBlocked ? { is_blocked: true } : {}) };
     } catch (error) {
         return { 
             success: false, 

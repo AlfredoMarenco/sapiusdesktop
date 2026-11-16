@@ -61,7 +61,8 @@ export default function CourseDetail({
   pdfDoc,
   onGoToPdfPage,
   onLaunchInteractivePdf,
-  onDownloadInteractivePdfRaw
+  onDownloadInteractivePdfRaw,
+  onAccountBlocked
 }) {
   const [opinionPending, setOpinionPending] = React.useState(false);
   const [opinionSubmitting, setOpinionSubmitting] = React.useState(false);
@@ -266,8 +267,12 @@ export default function CourseDetail({
   const checkOpinion = async () => {
     try {
       const res = await window.sapiusAPI.apiGet(`/electron/opinion/check/${selectedCourse.curso_programado.id}`);
+      if (res?.is_blocked) {
+        onAccountBlocked?.();
+        return;
+      }
       if (res && res.success) {
-        setOpinionPending(res.pending);
+        setOpinionPending(res.data?.pending ?? res.pending);
       }
     } catch (err) {
       console.error(err);
@@ -291,6 +296,10 @@ export default function CourseDetail({
       };
       
       const res = await window.sapiusAPI.apiPost('/electron/opinion/submit', payload);
+      if (res?.is_blocked) {
+        onAccountBlocked?.();
+        return;
+      }
       if (res && res.success) {
         setOpinionMsg('¡Gracias por tu opinión! Tu valoración ha sido registrada.');
         setOpinionPending(false);
@@ -751,13 +760,15 @@ export default function CourseDetail({
                                 >
                                   Resolver
                                 </button>
-                                <button 
-                                  onClick={() => onDownloadInteractivePdfRaw(mat.id)}
-                                  className="py-1 px-2 bg-slate-800 hover:bg-slate-700 text-slate-350 border border-white/5 rounded-lg text-[10px] font-bold cursor-pointer transition-all"
-                                  title="Descargar PDF Original"
-                                >
-                                  📥
-                                </button>
+                                {Boolean(mat.allow_download) && (
+                                  <button 
+                                    onClick={() => onDownloadInteractivePdfRaw(mat.id)}
+                                    className="py-1 px-2 bg-slate-800 hover:bg-slate-700 text-slate-350 border border-white/5 rounded-lg text-[10px] font-bold cursor-pointer transition-all"
+                                    title="Descargar PDF Original"
+                                  >
+                                    📥
+                                  </button>
+                                )}
                               </div>
                             </div>
                           ))}

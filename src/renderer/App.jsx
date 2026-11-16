@@ -317,10 +317,41 @@ export default function App() {
     setCurrentView('server-selection');
   };
 
+  const handleAccountBlocked = () => {
+    setActiveExamParams(null);
+    setActiveInteractivePdfId(null);
+    setCurrentView('locked');
+  };
+
+  const checkBlockedResponse = (res) => {
+    if (
+      res &&
+      (res.is_blocked === true ||
+        res.data?.is_blocked === true ||
+        res.data?.blocked === true ||
+        res.data?.status === 'blocked')
+    ) {
+      handleAccountBlocked();
+    }
+    return res;
+  };
+
+  const apiGet = async (endpoint) => {
+    if (!window.sapiusAPI) return null;
+    const res = await window.sapiusAPI.apiGet(endpoint);
+    return checkBlockedResponse(res);
+  };
+
+  const apiPost = async (endpoint, payload, isMultipart = false) => {
+    if (!window.sapiusAPI) return null;
+    const res = await window.sapiusAPI.apiPost(endpoint, payload, isMultipart);
+    return checkBlockedResponse(res);
+  };
+
   const fetchNotifications = async () => {
     try {
       if (window.sapiusAPI) {
-        const res = await window.sapiusAPI.apiGet('/electron/notifications');
+        const res = await apiGet('/electron/notifications');
         if (res && res.success) {
           setNotifications(res.data || []);
         }
@@ -333,7 +364,7 @@ export default function App() {
   const markNotificationAsRead = async (notifId) => {
     try {
       if (window.sapiusAPI) {
-        const res = await window.sapiusAPI.apiPost(`/electron/notifications/${notifId}/read`);
+        const res = await apiPost(`/electron/notifications/${notifId}/read`);
         if (res && res.success) {
           setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, read_at: new Date().toISOString() } : n));
         }
@@ -346,7 +377,7 @@ export default function App() {
   const clearAllNotifications = async () => {
     try {
       if (window.sapiusAPI) {
-        const res = await window.sapiusAPI.apiPost('/electron/notifications/clear-all');
+        const res = await apiPost('/electron/notifications/clear-all');
         if (res && res.success) {
           setNotifications(prev => prev.map(n => ({ ...n, read_at: new Date().toISOString() })));
         }
@@ -361,7 +392,7 @@ export default function App() {
     setLoadingCourses(true);
     try {
       if (window.sapiusAPI) {
-        const res = await window.sapiusAPI.apiGet('/electron/dashboard');
+        const res = await apiGet('/electron/dashboard');
         if (res && res.success) {
           console.log('[DEBUG] Dashboard User Loaded:', JSON.stringify(res.data.user));
           setAvatarError(false);
@@ -391,7 +422,7 @@ export default function App() {
     }
     try {
       if (window.sapiusAPI) {
-        const res = await window.sapiusAPI.apiGet(`/electron/course/${cpId}`);
+        const res = await apiGet(`/electron/course/${cpId}`);
         if (res && res.success) {
           setSelectedCourse(res.data);
           if (!inscripcionId && res.data.inscrito) {
@@ -443,7 +474,7 @@ export default function App() {
 
     try {
       if (window.sapiusAPI) {
-        const res = await window.sapiusAPI.apiGet(`/electron/lesson/${leccionId}/${cpId}`);
+        const res = await apiGet(`/electron/lesson/${leccionId}/${cpId}`);
         if (res && res.success) {
           setActiveLessonId(leccionId);
           setActiveLesson(res.data);
@@ -476,13 +507,13 @@ export default function App() {
     setLessonCompleted(nextState);
     if (window.sapiusAPI && selectedCourse && activeLessonId) {
       try {
-        await window.sapiusAPI.apiPost('/electron/lecciones/toggle-completion', {
+        await apiPost('/electron/lecciones/toggle-completion', {
           leccion_id: activeLessonId,
           curso_programado_id: selectedCourse.curso_programado.id
         });
         
         // Recargar temario del curso para refrescar barras de progreso y checkmarks del acordeón
-        const res = await window.sapiusAPI.apiGet(`/electron/course/${selectedCourse.curso_programado.id}`);
+        const res = await apiGet(`/electron/course/${selectedCourse.curso_programado.id}`);
         if (res && res.success) {
           setSelectedCourse(res.data);
         }
@@ -519,6 +550,10 @@ export default function App() {
         body: formData
       });
       const res = await response.json();
+      if (res?.is_blocked) {
+        handleAccountBlocked();
+        return;
+      }
       if (res.success) {
         setHomeworkStatus(res.data);
       } else {
@@ -629,7 +664,7 @@ export default function App() {
     setLoadingHomeworkTab(true);
     try {
       const cpId = selectedCourse ? selectedCourse.curso_programado.id : 0;
-      const res = await window.sapiusAPI.apiGet(`/electron/homework-tracking/${cpId}`);
+      const res = await apiGet(`/electron/homework-tracking/${cpId}`);
       if (res && res.success) {
         setHomeworkTracking(res.data);
       }
@@ -645,7 +680,7 @@ export default function App() {
     setLoadingCalendar(true);
     try {
       const cpId = selectedCourse ? selectedCourse.curso_programado.id : 0;
-      const res = await window.sapiusAPI.apiGet(`/electron/calendar/${cpId}`);
+      const res = await apiGet(`/electron/calendar/${cpId}`);
       if (res && res.success) {
         setCalendarSchedule(res.data.events || []);
         setWeeklyCalendars(res.data.weekly_calendars || []);
@@ -665,7 +700,7 @@ export default function App() {
       if (!inscId && selectedCourse && selectedCourse.inscrito) {
         inscId = selectedCourse.inscrito.id;
       }
-      const res = await window.sapiusAPI.apiGet(`/electron/grades/${inscId || 0}`);
+      const res = await apiGet(`/electron/grades/${inscId || 0}`);
       if (res && res.success) {
         setGradesData(res.data);
       }
@@ -681,7 +716,7 @@ export default function App() {
     setLoadingCourseProgress(true);
     try {
       const cpId = selectedCourse ? selectedCourse.curso_programado.id : 0;
-      const res = await window.sapiusAPI.apiGet(`/electron/course-progress/${cpId}`);
+      const res = await apiGet(`/electron/course-progress/${cpId}`);
       if (res && res.success) {
         setCourseProgressData(res.data);
       }
@@ -695,13 +730,20 @@ export default function App() {
   const handleDownloadInteractivePdfRaw = async (id) => {
     if (!window.sapiusAPI) return;
     try {
-      const token = localStorage.getItem('token') || '';
       const url = `${currentServer}/api/electron/material-pdfs/${id}/download-raw`;
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const response = await fetch(url);
+      if (!response.ok) {
+        if (response.status === 403) {
+          const errData = await response.json().catch(() => ({}));
+          if (errData?.is_blocked) {
+            handleAccountBlocked();
+            return;
+          }
+          alert(errData?.message || 'No tienes autorización para descargar este PDF.');
+          return;
         }
-      });
+        throw new Error('Error al descargar el PDF.');
+      }
       const blob = await response.blob();
       const link = document.createElement('a');
       link.href = URL.createObjectURL(blob);
@@ -847,7 +889,7 @@ export default function App() {
                   type="button"
                   onClick={async () => {
                     try {
-                      const res = await window.sapiusAPI.apiPost('/electron/request-mac-auth', { mac_address: pendingMacRequest });
+                      const res = await apiPost('/electron/request-mac-auth', { mac_address: pendingMacRequest });
                       if (res && res.success) {
                         setRequestMacSent(true);
                         setStatusMsg({ text: 'Solicitud de autorización enviada con éxito. Por favor espera la aprobación del administrador.', type: 'success' });
@@ -909,6 +951,7 @@ export default function App() {
       <InteractivePdfOverlay
         materialId={activeInteractivePdfId}
         serverUrl={currentServer}
+        onAccountBlocked={handleAccountBlocked}
         onClose={() => {
           setActiveInteractivePdfId(null);
           if (activeLesson && selectedCourse) {
@@ -932,12 +975,12 @@ export default function App() {
           onExamFinished={async () => {
             if (selectedCourse) {
               if (activeLesson) {
-                const lessonRes = await window.sapiusAPI.apiGet(`/electron/lesson/${activeLesson.leccion.id}/${selectedCourse.curso_programado.id}`);
+                const lessonRes = await apiGet(`/electron/lesson/${activeLesson.leccion.id}/${selectedCourse.curso_programado.id}`);
                 if (lessonRes && lessonRes.success) {
                   setActiveLesson(lessonRes.data);
                 }
               }
-              const courseRes = await window.sapiusAPI.apiGet(`/electron/course/${selectedCourse.curso_programado.id}`);
+              const courseRes = await apiGet(`/electron/course/${selectedCourse.curso_programado.id}`);
               if (courseRes && courseRes.success) {
                 setSelectedCourse(courseRes.data);
               }
@@ -1270,6 +1313,7 @@ export default function App() {
                     onGoToPdfPage={(num) => setPdfPageNum(num)}
                     onLaunchInteractivePdf={(id) => setActiveInteractivePdfId(id)}
                     onDownloadInteractivePdfRaw={handleDownloadInteractivePdfRaw}
+                    onAccountBlocked={handleAccountBlocked}
                   />
                 )}
               </>
